@@ -6,13 +6,13 @@
 ---
 
 ## 0. Trenutni status / sljedeći korak
-- **Faza:** F0 u tijeku. 🤖 Kod-kostur GOTOV (`app/`, Vite+React+r3f, buildano, commit `9e7b095`). Odluke: **npm** (ne pnpm), **JavaScript** (ne TS), app u podmapi **`app/`**.
-- **Čeka se 👤 korisnik (za dovršetak F0):**
-  1. Supabase projekt → dati mi **Project URL** + **anon public key**.
-  2. GitHub: napraviti prazan repo → zajedno pushamo kod.
-  3. Vercel: prijava GitHubom → povezati repo (root dir = `app/`) za auto-deploy.
-- **Može paralelno:** F1 (prijenos demoa u React) NE treba bazu → može se raditi dok korisnik slaže račune.
-- **Stack potvrđen:** Vite + React + react-three-fiber · Supabase · Vercel.
+- **F1 GOTOVO** ✅ (commit `d9e185e`): demo prenesen u React, radi lokalno (`npm run dev` u `app/`). Packer node-testiran (parity).
+- **F0 skoro gotovo:** kostur + Supabase ključevi (`app/.env`, gitignoreano) + git remote na `github.com/Pokijunior11/combiai`. **Ostaje:** 👤 `git push` + Vercel deploy.
+- **Sljedeći koraci:**
+  1. 👤 gurnuti kod: `git push -u origin main` (prvi put traži GitHub prijavu preko preglednika).
+  2. 🤖+👤 Vercel: povezati repo, **Root Directory = `app`**, dodati env varijable (VITE_SUPABASE_URL/ANON_KEY) → živi URL.
+  3. **F2** — baza: tablice `article` + `vehicle`, CRUD katalog (SQL pripremam ja, ti pokreneš u Supabaseu).
+- **Stack:** Vite + React + react-three-fiber · Supabase · Vercel. Odluke: npm, JavaScript, app u `app/`.
 
 ---
 
@@ -75,9 +75,10 @@ Poznata dugovanja (iz `issue.txt` i dogovora):
 - 👤 Napraviti Supabase projekt i Vercel prijavu (GitHubom); dati mi URL/ključeve (anon key).
 - **Gotovo kad:** prazna app živi na Vercel URL-u i objavi se sama na `git push`.
 
-### Faza 1 — Prijenos demoa u React (bez baze)
+### Faza 1 — Prijenos demoa u React (bez baze) ✅ GOTOVO (d9e185e)
 - 🤖 Packer + 3D prikaz + editor iz `demo-utovar-kombija.html` prebaciti u React/r3f, podaci u memoriji.
-- **Gotovo kad:** ista funkcionalnost kao demo, ali u novom stacku (izračun + 3D + korak utovara + plan istovara).
+- **Gotovo kad:** ista funkcionalnost kao demo, ali u novom stacku (izračun + 3D + korak utovara + plan istovara). ✅
+- Bonus: OrbitControls (drei) → touch rotacija + pinch-zoom ugrađeni; reaktivni izračun (bez „Izračunaj" gumba).
 
 ### Faza 2 — Baza: katalog + kombi
 - 🤖 Tablice: `article`, `vehicle`. CRUD ekran za katalog. Uređivanje jednog kombija.
