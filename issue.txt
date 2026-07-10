@@ -1,0 +1,2 @@
+problem sa polegnutim hladnjakom, fiksira da idu samo 4 u vis, ne daje opciju da se ispravi i dode npr sušilicu
+Koraci utovara, po redu od kabine do vrata

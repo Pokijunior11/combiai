@@ -1,0 +1,482 @@
+<!DOCTYPE html>
+<html lang="hr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Demo — Utovar kombija (LIFO po kupcima)</title>
+<style>
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif; color: #1c2330; background: #eef1f5; }
+  #app { display: flex; height: 100vh; }
+  #panel { width: 340px; min-width: 320px; background: #fff; border-right: 1px solid #dfe4ea; overflow-y: auto; padding: 16px 16px 40px; }
+  #stage { flex: 1; position: relative; background: linear-gradient(#dde3ec, #c6cfda); }
+  canvas { display: block; width: 100%; height: 100%; }
+  h1 { font-size: 16px; margin: 0 0 2px; }
+  .sub { font-size: 12px; color: #6b7484; margin: 0 0 12px; }
+  .van-info { font-size: 12px; background: #f1f5fb; border: 1px solid #dce6f5; border-radius: 8px; padding: 8px 10px; margin-bottom: 12px; color: #33507a; }
+  .seg { display:flex; gap:6px; margin-bottom:12px; }
+  .seg button { flex:1; padding:7px; border:1px solid #cdd4df; background:#f6f8fb; border-radius:7px; font-size:13px; cursor:pointer; }
+  .seg button.on { background:#2a6df4; color:#fff; border-color:#2a6df4; }
+  table { width:100%; border-collapse:collapse; font-size:12px; }
+  th, td { padding:4px 3px; text-align:center; }
+  th.prod, td.prod { text-align:left; }
+  thead th { font-size:11px; color:#5a6472; border-bottom:1px solid #e6eaf0; }
+  .chead { display:inline-flex; align-items:center; gap:4px; }
+  .dot { width:10px; height:10px; border-radius:50%; display:inline-block; }
+  tbody tr { border-bottom:1px solid #f2f4f8; }
+  .pname { font-size:12px; } .pdim { font-size:9px; color:#9aa2b1; }
+  .mini { display:inline-flex; align-items:center; gap:3px; }
+  .mini button { width:20px; height:20px; border:1px solid #d2d8e2; background:#f6f8fb; border-radius:5px; font-size:13px; line-height:1; cursor:pointer; color:#333; }
+  .mini span { width:16px; display:inline-block; font-variant-numeric:tabular-nums; }
+  #calc { width:100%; margin:14px 0 12px; padding:11px; border:none; border-radius:9px; background:#2a6df4; color:#fff; font-size:14px; font-weight:600; cursor:pointer; }
+  #calc:active { background:#205bd0; }
+  .stats { font-size:13px; line-height:1.6; }
+  .stats b { font-variant-numeric:tabular-nums; }
+  .bar { height:8px; background:#e5e9f0; border-radius:5px; overflow:hidden; margin:3px 0 10px; }
+  .bar > div { height:100%; }
+  .warn { background:#fff3f0; border:1px solid #f6c7bb; color:#b23c17; padding:8px 10px; border-radius:8px; font-size:12px; margin-top:8px; }
+  .ok { color:#1a8a4a; }
+  .legend { margin-top:12px; font-size:12px; }
+  .legrow { display:flex; align-items:center; gap:8px; padding:3px 0; }
+  .legrow .sw { width:14px; height:14px; border-radius:3px; flex:none; }
+  .order { background:#f5f7fb; border:1px solid #e2e7ef; border-radius:8px; padding:8px 10px; margin-top:10px; font-size:12px; color:#3a4656; }
+  .order h4 { margin:0 0 6px; font-size:12px; }
+  .ustep { padding:5px 0; border-top:1px dashed #dfe4ea; }
+  .ustep:first-of-type { border-top:none; }
+  .move { color:#b23c17; }
+  .hint { position:absolute; bottom:12px; left:12px; font-size:11px; color:#4b5568; background:rgba(255,255,255,.75); padding:5px 9px; border-radius:6px; }
+  #stepwrap { position:absolute; top:12px; left:12px; right:12px; background:rgba(255,255,255,.88); border:1px solid #d8dee7; padding:6px 10px; border-radius:8px; font-size:12px; display:flex; align-items:center; gap:8px; }
+  #step { flex:1; }
+  .stepbtn { width:26px; height:24px; border:1px solid #cdd4df; background:#f6f8fb; border-radius:6px; font-size:13px; line-height:1; cursor:pointer; color:#33465e; }
+  .stepbtn:active { background:#e6ecf5; }
+  .stepbtn:disabled { opacity:.4; cursor:default; }
+  #stage canvas { touch-action: none; }
+  @media (max-width: 760px) {
+    #app { flex-direction: column; }
+    #stage { height: 46vh; order: 1; }
+    #panel { width: 100%; min-width: 0; height: 54vh; border-right: none; border-top: 1px solid #dfe4ea; order: 2; }
+    .stepbtn { width: 34px; height: 30px; font-size: 16px; }
+    #stepwrap { font-size: 13px; padding: 8px 10px; }
+    .mini button { width: 27px; height: 27px; font-size: 15px; }
+    .mini span { width: 20px; }
+    #calc { padding: 13px; font-size: 15px; }
+    .seg button { padding: 9px; }
+  }
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="panel">
+    <h1>Utovar kombija — demo</h1>
+    <p class="sub">Auto-raspored · gusto slaganje u vis · LIFO (istovar obrnut od utovara)</p>
+    <div class="van-info">Kombi 4,0 × 2,0 × 2,30 m · nosivost 1400 kg (demo) · vrata straga · <b>Kupac 1 = uz kabinu</b></div>
+    <div class="seg" id="seg">
+      <button data-n="2">2 kupca</button>
+      <button data-n="3" class="on">3 kupca</button>
+    </div>
+    <div class="seg" id="examples">
+      <button data-ex="a">Primjer A</button>
+      <button data-ex="b">Primjer B</button>
+    </div>
+    <table id="alloc"></table>
+    <button id="calc">Izračunaj utovar</button>
+    <div class="stats" id="stats"></div>
+    <div class="order" id="unload"></div>
+    <div class="legend" id="legend"></div>
+  </div>
+  <div id="stage">
+    <div id="stepwrap">
+      <span style="white-space:nowrap">Korak utovara</span>
+      <button id="stepPrev" class="stepbtn" title="Prethodni aparat">◀</button>
+      <input id="step" type="range" min="0" max="0" value="0">
+      <button id="stepNext" class="stepbtn" title="Sljedeći aparat">▶</button>
+      <span id="steplbl" style="white-space:nowrap;font-variant-numeric:tabular-nums">0 / 0</span>
+    </div>
+    <div class="hint">Povuci = rotacija · kotačić = zoom</div>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+const EPS = 1e-6;
+const VAN = { L:4.0, W:2.0, H:2.30, payload:1400 };
+
+// l = duljina (os X, kabina->vrata), w = širina (os Z), h = visina (os Y)
+// canLie = smije se položiti (mali frižider); ostalo samo uspravno (yaw 90°)
+const PRODUCTS = {
+  hladnjak:  {name:'Hladnjak',         l:0.60, w:0.65, h:1.85, weight:75, canLie:false},
+  mfrizider: {name:'Mali frižider',    l:0.55, w:0.55, h:1.40, weight:38, canLie:true},
+  zamrzivac: {name:'Zamrzivač škrinja',l:0.80, w:0.65, h:0.85, weight:45, canLie:false},
+  perilica:  {name:'Perilica rublja',  l:0.60, w:0.60, h:0.85, weight:70, canLie:false},
+  susilica:  {name:'Sušilica',         l:0.60, w:0.60, h:0.85, weight:35, canLie:false},
+  posudje:   {name:'Perilica posuđa',  l:0.60, w:0.60, h:0.82, weight:40, canLie:false},
+  stednjak:  {name:'Štednjak',         l:0.60, w:0.60, h:0.90, weight:50, canLie:false},
+  mikro:     {name:'Mikrovalna',       l:0.50, w:0.40, h:0.30, weight:15, canLie:true},
+};
+const PKEYS = Object.keys(PRODUCTS);
+
+// Kupac 1 = prvi utovaren = UZ KABINU. Istovar ide obrnuto: zadnji kupac prvi.
+const CUSTOMERS = [
+  {name:'Kupac 1', color:'#e0783f', qty:{hladnjak:1, perilica:1, mikro:1}},
+  {name:'Kupac 2', color:'#2f7dd1', qty:{posudje:1, perilica:1, stednjak:1}},
+  {name:'Kupac 3', color:'#4fa06a', qty:{mfrizider:2, susilica:1, perilica:2}},
+];
+const EXAMPLES = {
+  a: [ {hladnjak:1,perilica:1,mikro:1}, {posudje:1,perilica:1,stednjak:1}, {mfrizider:2,susilica:1,perilica:2} ],
+  b: [ {perilica:2,hladnjak:1,mikro:1}, {zamrzivac:1,posudje:1,stednjak:1}, {mfrizider:3,perilica:2,susilica:1} ],
+};
+let numCust = 3;
+
+// ============================ PACKER ============================
+// Koordinate: x = duljina (0 = kabina, L = vrata), y = visina, z = širina.
+// Puni se od kabine prema vratima. AABB geometrija, extreme-point kandidati.
+// Tvrda pravila: stane, ne preklapa, pun oslonac, masa_gore <= masa_dolje, nosivost.
+
+function orientations(it){
+  const perms = [[0,1,2],[0,2,1],[1,0,2],[1,2,0],[2,0,1],[2,1,0]];
+  const d = [it.l, it.w, it.h];
+  const seen = new Set(), out = [];
+  for(const [a,b,c] of perms){
+    const o = {dx:d[a], dy:d[b], dz:d[c]};
+    if(!it.canLie && Math.abs(o.dy - it.h) > EPS) continue; // samo uspravno -> visina = h
+    const k = o.dx.toFixed(3)+','+o.dy.toFixed(3)+','+o.dz.toFixed(3);
+    if(seen.has(k)) continue; seen.add(k); out.push(o);
+  }
+  return out;
+}
+function fitsBounds(c){
+  return c.x >= -EPS && c.y >= -EPS && c.z >= -EPS &&
+         c.x + c.dx <= VAN.L + EPS && c.y + c.dy <= VAN.H + EPS && c.z + c.dz <= VAN.W + EPS;
+}
+function overlap(a,b){
+  return a.x < b.x+b.dx-EPS && b.x < a.x+a.dx-EPS &&
+         a.y < b.y+b.dy-EPS && b.y < a.y+a.dy-EPS &&
+         a.z < b.z+b.dz-EPS && b.z < a.z+a.dz-EPS;
+}
+function collides(c, placed){ return placed.some(p => overlap(c,p)); }
+function unionArea(rects){
+  const xs = [...new Set(rects.flatMap(r=>[r.x0,r.x1]))].sort((a,b)=>a-b);
+  const zs = [...new Set(rects.flatMap(r=>[r.z0,r.z1]))].sort((a,b)=>a-b);
+  let area = 0;
+  for(let i=0;i<xs.length-1;i++) for(let j=0;j<zs.length-1;j++){
+    const cx=(xs[i]+xs[i+1])/2, cz=(zs[j]+zs[j+1])/2;
+    if(rects.some(r=>cx>r.x0&&cx<r.x1&&cz>r.z0&&cz<r.z1)) area += (xs[i+1]-xs[i])*(zs[j+1]-zs[j]);
+  }
+  return area;
+}
+function supported(c, placed){
+  if(c.y <= EPS) return true;                       // na podu
+  const rects = [];
+  for(const p of placed){
+    if(Math.abs(p.y+p.dy - c.y) < 1e-4){            // vrh p-a je na razini baze c-a
+      const x0=Math.max(p.x,c.x), x1=Math.min(p.x+p.dx, c.x+c.dx);
+      const z0=Math.max(p.z,c.z), z1=Math.min(p.z+p.dz, c.z+c.dz);
+      if(x1-x0>EPS && z1-z0>EPS){
+        if(c.weight > p.weight + 1e-6) return false; // teže na lakše -> zabranjeno
+        rects.push({x0,x1,z0,z1});
+      }
+    }
+  }
+  if(!rects.length) return false;
+  return unionArea(rects) >= c.dx*c.dz - 1e-3;       // pun oslonac
+}
+function insideAny(pt, placed){
+  return placed.some(p => pt.x>p.x+EPS && pt.x<p.x+p.dx-EPS &&
+                          pt.y>p.y+EPS && pt.y<p.y+p.dy-EPS &&
+                          pt.z>p.z+EPS && pt.z<p.z+p.dz-EPS);
+}
+function dedupePts(pts){
+  const seen = new Set();
+  return pts.filter(p=>{ const k=p.x.toFixed(3)+','+p.y.toFixed(3)+','+p.z.toFixed(3); if(seen.has(k)) return false; seen.add(k); return true; });
+}
+function lessKey(a,b){ for(let i=0;i<a.length;i++){ if(a[i]<b[i]-1e-9) return true; if(a[i]>b[i]+1e-9) return false; } return false; }
+
+function tryPack(items, placeKey){
+  const placed = []; const unplaced = []; let totW = 0;
+  let points = [{x:0,y:0,z:0}];
+  for(const it of items){
+    let best = null;
+    for(const P of points){
+      for(const o of orientations(it)){
+        const c = {x:P.x, y:P.y, z:P.z, dx:o.dx, dy:o.dy, dz:o.dz, weight:it.weight};
+        if(!fitsBounds(c)) continue;
+        if(totW + it.weight > VAN.payload + EPS) continue;
+        if(collides(c, placed)) continue;
+        if(!supported(c, placed)) continue;
+        const k = placeKey(c);
+        if(!best || lessKey(k, best.k)) best = {c, k};
+      }
+    }
+    if(!best){ unplaced.push(it); continue; }
+    const c = best.c;
+    const item = {...it, x:c.x, y:c.y, z:c.z, dx:c.dx, dy:c.dy, dz:c.dz, order:placed.length};
+    placed.push(item); totW += it.weight;
+    points.push({x:c.x+c.dx, y:c.y, z:c.z});
+    points.push({x:c.x, y:c.y, z:c.z+c.dz});
+    points.push({x:c.x, y:c.y+c.dy, z:c.z});
+    points = dedupePts(points.filter(pt => !insideAny(pt, placed)));
+  }
+  return {placed, unplaced, weight:totW};
+}
+
+// Plan istovara: obrnuto od utovara (najveći custIdx prvi). Broji "pomakni X".
+function unloadPlan(placed){
+  const inVan = new Set(placed);
+  const order = [...new Set(placed.map(p=>p.custIdx))].sort((a,b)=>b-a);
+  let moves = 0; const steps = [];
+  for(const ci of order){
+    const mine = placed.filter(p => p.custIdx===ci && inVan.has(p));
+    const blockers = new Set();
+    for(const Y of mine){
+      for(const B of inVan){
+        if(B===Y || B.custIdx===ci) continue;
+        const yOv = Y.y < B.y+B.dy-EPS && B.y < Y.y+Y.dy-EPS;
+        const zOv = Y.z < B.z+B.dz-EPS && B.z < Y.z+Y.dz-EPS;
+        const xOv = Y.x < B.x+B.dx-EPS && B.x < Y.x+Y.dx-EPS;
+        const front = yOv && zOv && (B.x+B.dx > Y.x+Y.dx+EPS); // ispred prema vratima
+        const above = xOv && zOv && (B.y+B.dy > Y.y+Y.dy+EPS); // na vrhu
+        if(front || above) blockers.add(B);
+      }
+    }
+    moves += blockers.size;
+    steps.push({custIdx:ci, name:mine[0]?mine[0].custName:('Kupac '+(ci+1)), color:mine[0]?mine[0].color:'#888', count:mine.length, blockers:[...blockers]});
+    for(const Y of mine) inVan.delete(Y);
+  }
+  return {moves, steps};
+}
+
+const area = it => it.l * it.w;
+const keyYXZ = c => [c.y, c.x, c.z];
+const keyXYZ = c => [c.x, c.y, c.z];
+const keyYZX = c => [c.y, c.z, c.x];
+const STRATS = [
+  {cmp:(a,b)=> area(b)-area(a) || b.weight-a.weight || b.h-a.h, place:keyYXZ},
+  {cmp:(a,b)=> b.h-a.h || area(b)-area(a) || b.weight-a.weight, place:keyXYZ},
+  {cmp:(a,b)=> b.weight-a.weight || area(b)-area(a) || b.h-a.h, place:keyYZX},
+];
+function makeItems(custs, cmp){
+  const arr = [];
+  custs.forEach((c, ci)=>{
+    const list = [];
+    for(const k of PKEYS){ const n=c.qty[k]||0; for(let i=0;i<n;i++){ const p=PRODUCTS[k]; list.push({...p, key:k, custName:c.name, custIdx:ci, color:c.color}); } }
+    list.sort(cmp);
+    arr.push(...list);
+  });
+  return arr;
+}
+function better(a,b){
+  if(a.n !== b.n) return a.n > b.n;         // više utovareno
+  if(a.moves !== b.moves) return a.moves < b.moves; // manje pomicanja
+  return a.w > b.w;
+}
+function computeBest(custs){
+  let best = null;
+  for(const st of STRATS){
+    const r = tryPack(makeItems(custs, st.cmp), st.place);
+    const up = unloadPlan(r.placed);
+    const score = {n:r.placed.length, moves:up.moves, w:r.weight};
+    const cand = {...r, up, score};
+    if(!best || better(score, best.score)) best = cand;
+  }
+  return best;
+}
+
+// ============================ UI tablica ============================
+const allocEl = document.getElementById('alloc');
+function buildTable(){
+  const act = CUSTOMERS.slice(0, numCust);
+  let h = '<thead><tr><th class="prod">Artikl</th>';
+  act.forEach((c,ci)=> h += `<th><span class="chead"><span class="dot" style="background:${c.color}"></span>${ci+1}.</span></th>`);
+  h += '</tr></thead><tbody>';
+  PKEYS.forEach(k=>{
+    const p = PRODUCTS[k];
+    const lie = p.canLie ? ' · liježe' : '';
+    h += `<tr><td class="prod"><div class="pname">${p.name}</div><div class="pdim">${(p.l*100)|0}×${(p.w*100)|0}×${(p.h*100)|0}cm · ${p.weight}kg${lie}</div></td>`;
+    act.forEach((c,ci)=>{
+      const v = c.qty[k]||0;
+      h += `<td><span class="mini"><button data-c="${ci}" data-k="${k}" data-d="-1">−</button><span id="v_${ci}_${k}">${v}</span><button data-c="${ci}" data-k="${k}" data-d="1">+</button></span></td>`;
+    });
+    h += '</tr>';
+  });
+  h += '</tbody>';
+  allocEl.innerHTML = h;
+}
+allocEl.addEventListener('click', e=>{
+  const b = e.target.closest('button'); if(!b) return;
+  const ci=+b.dataset.c, k=b.dataset.k, d=+b.dataset.d;
+  CUSTOMERS[ci].qty[k] = Math.max(0, (CUSTOMERS[ci].qty[k]||0)+d);
+  document.getElementById(`v_${ci}_${k}`).textContent = CUSTOMERS[ci].qty[k];
+});
+document.getElementById('seg').addEventListener('click', e=>{
+  const b = e.target.closest('button'); if(!b) return;
+  numCust = +b.dataset.n;
+  document.querySelectorAll('#seg button').forEach(x=>x.classList.toggle('on', +x.dataset.n===numCust));
+  buildTable(); run();
+});
+document.getElementById('examples').addEventListener('click', e=>{
+  const b = e.target.closest('button'); if(!b) return;
+  const ex = EXAMPLES[b.dataset.ex];
+  CUSTOMERS.forEach((c,i)=> c.qty = {...(ex[i]||{})});
+  buildTable(); run();
+});
+
+// ============================ Three.js ============================
+const stage = document.getElementById('stage');
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(45,1,0.1,100);
+const renderer = new THREE.WebGLRenderer({antialias:true});
+renderer.setPixelRatio(window.devicePixelRatio);
+stage.appendChild(renderer.domElement);
+scene.add(new THREE.AmbientLight(0xffffff,0.78));
+const d1=new THREE.DirectionalLight(0xffffff,0.65); d1.position.set(4,8,5); scene.add(d1);
+const d2=new THREE.DirectionalLight(0xffffff,0.3); d2.position.set(-5,4,-4); scene.add(d2);
+scene.add(new THREE.GridHelper(10,20,0x9aa6b6,0xc2ccd8));
+
+const vanEdges = new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.BoxGeometry(VAN.L,VAN.H,VAN.W)), new THREE.LineBasicMaterial({color:0x33465e}));
+vanEdges.position.set(0,VAN.H/2,0); scene.add(vanEdges);
+const floor = new THREE.Mesh(new THREE.PlaneGeometry(VAN.L,VAN.W), new THREE.MeshBasicMaterial({color:0x6f8bb0,transparent:true,opacity:0.06,side:THREE.DoubleSide}));
+floor.rotation.x=-Math.PI/2; floor.position.y=0.001; scene.add(floor);
+
+// Vrata straga = +X (three) ; kabina = -X. (packer x=0 -> kabina -> three -L/2)
+const doorPlane = new THREE.Mesh(new THREE.PlaneGeometry(VAN.W,VAN.H), new THREE.MeshBasicMaterial({color:0xc0392b,transparent:true,opacity:0.10,side:THREE.DoubleSide}));
+doorPlane.rotation.y=Math.PI/2; doorPlane.position.set(VAN.L/2,VAN.H/2,0); scene.add(doorPlane);
+function makeLabel(text,bg){
+  const c=document.createElement('canvas'); c.width=256; c.height=64;
+  const g=c.getContext('2d'); g.fillStyle=bg; g.fillRect(0,0,256,64);
+  g.fillStyle='#fff'; g.font='bold 26px sans-serif'; g.textAlign='center'; g.textBaseline='middle'; g.fillText(text,128,34);
+  const s=new THREE.Sprite(new THREE.SpriteMaterial({map:new THREE.CanvasTexture(c),transparent:true}));
+  s.scale.set(1.1,0.28,1); return s;
+}
+const doorLbl=makeLabel('VRATA / istovar','#c0392b'); doorLbl.position.set(VAN.L/2+0.05,VAN.H+0.25,0); scene.add(doorLbl);
+const frontLbl=makeLabel('kabina','#5a6472'); frontLbl.position.set(-VAN.L/2-0.05,VAN.H+0.25,0); scene.add(frontLbl);
+
+const loadGroup=new THREE.Group(); scene.add(loadGroup);
+function render3D(placed, k){
+  while(loadGroup.children.length) loadGroup.remove(loadGroup.children[0]);
+  const list = (k==null) ? placed : placed.filter(p=>p.step < k);
+  list.forEach(p=>{
+    const g=new THREE.BoxGeometry(p.dx,p.dy,p.dz);
+    const box=new THREE.Mesh(g, new THREE.MeshLambertMaterial({color:new THREE.Color(p.color)}));
+    box.position.set(p.x+p.dx/2 - VAN.L/2, p.y+p.dy/2, p.z+p.dz/2 - VAN.W/2);
+    box.add(new THREE.LineSegments(new THREE.EdgesGeometry(g), new THREE.LineBasicMaterial({color:0x1c2a38,transparent:true,opacity:0.55})));
+    loadGroup.add(box);
+  });
+}
+
+let theta=2.35, phi=1.02, radius=8.2;
+const target=new THREE.Vector3(0,VAN.H/2,0);
+function updateCam(){
+  phi=Math.max(0.2,Math.min(Math.PI/2-0.02,phi));
+  radius=Math.max(4,Math.min(20,radius));
+  camera.position.set(target.x+radius*Math.sin(phi)*Math.cos(theta), target.y+radius*Math.cos(phi), target.z+radius*Math.sin(phi)*Math.sin(theta));
+  camera.lookAt(target);
+}
+// Kontrole: jedan prst/miš = rotacija, dva prsta = pinch-zoom, kotačić = zoom
+let drag=false,lx=0,ly=0;
+const pointers=new Map(); let pinchPrev=null;
+renderer.domElement.addEventListener('pointerdown',e=>{
+  pointers.set(e.pointerId,{x:e.clientX,y:e.clientY});
+  if(pointers.size===1){ drag=true; lx=e.clientX; ly=e.clientY; }
+  else { drag=false; pinchPrev=null; }
+});
+function endPointer(e){
+  pointers.delete(e.pointerId);
+  if(pointers.size<2) pinchPrev=null;
+  if(pointers.size===0){ drag=false; }
+  else if(pointers.size===1){ const p=[...pointers.values()][0]; drag=true; lx=p.x; ly=p.y; }
+}
+window.addEventListener('pointerup', endPointer);
+window.addEventListener('pointercancel', endPointer);
+window.addEventListener('pointermove',e=>{
+  if(pointers.has(e.pointerId)) pointers.set(e.pointerId,{x:e.clientX,y:e.clientY});
+  if(pointers.size>=2){
+    const p=[...pointers.values()];
+    const d=Math.hypot(p[0].x-p[1].x, p[0].y-p[1].y);
+    if(pinchPrev!=null && d>0){ radius*=pinchPrev/d; updateCam(); }
+    pinchPrev=d; return;
+  }
+  if(!drag) return;
+  theta-=(e.clientX-lx)*0.008; phi-=(e.clientY-ly)*0.008; lx=e.clientX; ly=e.clientY; updateCam();
+});
+renderer.domElement.addEventListener('wheel',e=>{ e.preventDefault(); radius+=e.deltaY*0.01; updateCam(); },{passive:false});
+function resize(){ const w=stage.clientWidth,h=stage.clientHeight; renderer.setSize(w,h,false); camera.aspect=w/h; camera.updateProjectionMatrix(); }
+window.addEventListener('resize',resize);
+function loop(){ requestAnimationFrame(loop); renderer.render(scene,camera); }
+
+// korak utovara (slider)
+let lastPlaced = [];
+const stepEl = document.getElementById('step');
+const stepLbl = document.getElementById('steplbl');
+const stepPrev = document.getElementById('stepPrev');
+const stepNext = document.getElementById('stepNext');
+function setStep(k){
+  const n = lastPlaced.length;
+  k = Math.max(0, Math.min(n, k));
+  stepEl.value = k;
+  render3D(lastPlaced, k>=n ? null : k);
+  stepLbl.textContent = `${k} / ${n}`;
+  stepPrev.disabled = k<=0;
+  stepNext.disabled = k>=n;
+}
+stepEl.addEventListener('input', ()=> setStep(+stepEl.value));
+stepPrev.addEventListener('click', ()=> setStep(+stepEl.value - 1));
+stepNext.addEventListener('click', ()=> setStep(+stepEl.value + 1));
+
+// ============================ izračun ============================
+function run(){
+  const custs = CUSTOMERS.slice(0, numCust).map((c,i)=>({...c, idx:i}));
+  const t0 = performance.now();
+  const best = computeBest(custs);
+  const ms = performance.now() - t0;
+
+  // korak utovara: redom od kabine (x=0) prema vratima (x=L), niže prije višeg
+  lastPlaced = best.placed.slice().sort((a,b)=> a.x-b.x || a.y-b.y || a.z-b.z);
+  lastPlaced.forEach((p,i)=> p.step = i);
+  const n = lastPlaced.length;
+  stepEl.max = n;
+  setStep(n);
+
+  const vanVol = VAN.L*VAN.W*VAN.H;
+  const usedVol = best.placed.reduce((s,p)=>s+p.dx*p.dy*p.dz,0);
+  const weight = best.weight;
+  let maxY=0; best.placed.forEach(p=>maxY=Math.max(maxY,p.y+p.dy));
+  const util = usedVol/vanVol;
+  const wPct = Math.min(100, weight/VAN.payload*100);
+  const over = weight > VAN.payload;
+
+  document.getElementById('stats').innerHTML = `
+    <div>Iskorištenost prostora: <b>${(util*100).toFixed(1)}%</b></div>
+    <div class="bar"><div style="width:${(util*100).toFixed(0)}%;background:#2a6df4"></div></div>
+    <div>Težina: <b>${weight.toFixed(0)} / ${VAN.payload} kg</b></div>
+    <div class="bar"><div style="width:${wPct.toFixed(0)}%;background:${over?'#c0392b':'#1a8a4a'}"></div></div>
+    <div>Utovareno: <b>${n}</b> kom · najviši stup <b>${maxY.toFixed(2)} m</b> · izračun <b>${ms.toFixed(1)} ms</b></div>
+    <div>Pomicanja pri istovaru: <b>${best.up.moves}</b></div>
+    ${best.unplaced.length ? `<div class="warn">Nije stalo: ${best.unplaced.length} kom (${best.unplaced.map(u=>u.name).join(', ')}).</div>` : '<div class="ok">✓ Sve stane.</div>'}
+    ${over ? '<div class="warn">Prekoračena nosivost — makni nešto ili drugi kombi.</div>' : ''}`;
+
+  // plan istovara (obrnuto od utovara)
+  let uh = '<h4>Plan istovara (redom rute)</h4>';
+  best.up.steps.forEach((s,i)=>{
+    const notes = s.blockers.length
+      ? `<div class="move">↳ prvo pomakni: ${s.blockers.map(b=>`${b.name} (${b.custName})`).join(', ')}</div>`
+      : '<div style="color:#1a8a4a">↳ slobodan pristup</div>';
+    uh += `<div class="ustep"><b>${i+1}. ${s.name}</b> · ${s.count} kom ${notes}</div>`;
+  });
+  document.getElementById('unload').innerHTML = uh;
+
+  // legenda (redoslijed utovara kabina -> vrata)
+  const act = CUSTOMERS.slice(0, numCust);
+  let leg = '<div style="font-weight:600;margin-bottom:4px">Kupci (utovar: kabina → vrata)</div>';
+  act.forEach((c,ci)=>{
+    const items = best.placed.filter(p=>p.custIdx===ci);
+    const w = items.reduce((s,p)=>s+p.weight,0);
+    leg += `<div class="legrow"><span class="sw" style="background:${c.color}"></span> ${ci+1}. ${c.name} · ${items.length} kom · ${w.toFixed(0)} kg</div>`;
+  });
+  document.getElementById('legend').innerHTML = leg;
+}
+
+document.getElementById('calc').addEventListener('click', run);
+buildTable(); resize(); updateCam(); loop(); run();
+</script>
+</body>
+</html>
