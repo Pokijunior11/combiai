@@ -6,8 +6,12 @@
 ---
 
 ## 0. Trenutni status / sljedeći korak
-- **Faza:** planiranje (Kolosijek A) ✅ ZAVRŠENO (P1–P8). Fazni plan složen (sekcija 5).
-- **Sljedeći korak:** **Faza 0 — Kostur + živi URL.** Čeka se 👤 korisnik: napraviti Supabase projekt + Vercel prijavu (GitHubom) i dati anon key/URL.
+- **Faza:** F0 u tijeku. 🤖 Kod-kostur GOTOV (`app/`, Vite+React+r3f, buildano, commit `9e7b095`). Odluke: **npm** (ne pnpm), **JavaScript** (ne TS), app u podmapi **`app/`**.
+- **Čeka se 👤 korisnik (za dovršetak F0):**
+  1. Supabase projekt → dati mi **Project URL** + **anon public key**.
+  2. GitHub: napraviti prazan repo → zajedno pushamo kod.
+  3. Vercel: prijava GitHubom → povezati repo (root dir = `app/`) za auto-deploy.
+- **Može paralelno:** F1 (prijenos demoa u React) NE treba bazu → može se raditi dok korisnik slaže račune.
 - **Stack potvrđen:** Vite + React + react-three-fiber · Supabase · Vercel.
 
 ---
