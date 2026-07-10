@@ -8,10 +8,10 @@
 ## 0. Trenutni status / sljedeći korak
 - **F1 GOTOVO** ✅ (commit `d9e185e`): demo prenesen u React, radi lokalno (`npm run dev` u `app/`). Packer node-testiran (parity).
 - **F0 skoro gotovo:** kostur + Supabase ključevi (`app/.env`, gitignoreano) + git remote na `github.com/Pokijunior11/combiai`. **Ostaje:** 👤 `git push` + Vercel deploy.
+- **Kod je na GitHubu** ✅ `github.com/Pokijunior11/combiai` (main). (Napomena: koristi se račun Pokijunior11.)
 - **Sljedeći koraci:**
-  1. 👤 gurnuti kod: `git push -u origin main` (prvi put traži GitHub prijavu preko preglednika).
-  2. 🤖+👤 Vercel: povezati repo, **Root Directory = `app`**, dodati env varijable (VITE_SUPABASE_URL/ANON_KEY) → živi URL.
-  3. **F2** — baza: tablice `article` + `vehicle`, CRUD katalog (SQL pripremam ja, ti pokreneš u Supabaseu).
+  1. 🤖+👤 **Vercel**: import repo, **Root Directory = `app`**, dodati env varijable (VITE_SUPABASE_URL/ANON_KEY) → živi URL (dovršava F0).
+  2. **F2** — baza: tablice `article` + `vehicle`, CRUD katalog (SQL pripremam ja, ti pokreneš u Supabase SQL editoru).
 - **Stack:** Vite + React + react-three-fiber · Supabase · Vercel. Odluke: npm, JavaScript, app u `app/`.
 
 ---
