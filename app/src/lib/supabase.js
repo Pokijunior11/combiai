@@ -1,11 +1,12 @@
 import { createClient } from '@supabase/supabase-js'
 
-const url = import.meta.env.VITE_SUPABASE_URL
-const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
+// .trim() da suvišni razmak/novi red (npr. pri lijepljenju u Vercel) ne razbije zaglavlja.
+const url = import.meta.env.VITE_SUPABASE_URL?.trim()
+const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY?.trim()
 
 if (!url || !anonKey) {
-  // Ne rušimo app; samo upozorimo (F1 još ne koristi bazu).
-  console.warn('Supabase env varijable nisu postavljene (VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY).')
+  console.error('Nedostaju Supabase env varijable (VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY).')
+  throw new Error('Supabase nije konfiguriran — provjeri env varijable (lokalno .env, na Vercelu Project Settings → Environment Variables).')
 }
 
 export const supabase = createClient(url, anonKey)
