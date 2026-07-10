@@ -1,10 +1,9 @@
 import { Edges, Html } from '@react-three/drei'
-import { VAN } from '../data/catalog'
 
-function Box({ p }) {
-  const cx = p.x + p.dx / 2 - VAN.L / 2
+function Box({ p, van }) {
+  const cx = p.x + p.dx / 2 - van.L / 2
   const cy = p.y + p.dy / 2
-  const cz = p.z + p.dz / 2 - VAN.W / 2
+  const cz = p.z + p.dz / 2 - van.W / 2
   return (
     <mesh position={[cx, cy, cz]}>
       <boxGeometry args={[p.dx, p.dy, p.dz]} />
@@ -20,8 +19,8 @@ const labelStyle = (bg) => ({
   fontFamily: 'sans-serif',
 })
 
-export default function VanScene({ boxes }) {
-  const { L, W, H } = VAN
+export default function VanScene({ boxes, van }) {
+  const { L, W, H } = van
   return (
     <>
       <ambientLight intensity={0.8} />
@@ -54,7 +53,7 @@ export default function VanScene({ boxes }) {
         <div style={labelStyle('#5a6472')}>kabina</div>
       </Html>
 
-      {boxes.map((p, i) => <Box key={i} p={p} />)}
+      {boxes.map((p, i) => <Box key={i} p={p} van={van} />)}
     </>
   )
 }

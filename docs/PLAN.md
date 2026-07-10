@@ -8,11 +8,8 @@
 ## 0. Trenutni status / sljedeći korak
 - **F0 GOTOVO** ✅ Živi URL: **https://combiai.vercel.app/** (auto-deploy na `git push`). Kod na `github.com/Pokijunior11/combiai` (main, račun Pokijunior11).
 - **F1 GOTOVO** ✅ (commit `d9e185e`): demo prenesen u React. Packer node-testiran (parity).
-- **F2 U TIJEKU:**
-  - SQL **pripremljen** (`supabase/f2_catalog_vehicle.sql`) → 👤 pokrenuti u Supabase SQL editoru (stvara `article`+`vehicle`, seed 8 artikala + kombi).
-  - Zatim 🤖: app čita katalog/kombi iz baze umjesto `catalog.js` + CRUD ekran za katalog.
-  - Konvencija: dimenzije **cm**, težina **kg**, **brutto**; app pretvara cm→m. RLS otvoren za anon (V1 dogovor).
-- **Sitnica za usput:** naslov stranice je još „app" → promijeniti u „CombiAI / Utovar kombija" (`app/index.html`).
+- **F2 GOTOVO** ✅ SQL pokrenut (tablice + seed u bazi), app čita katalog/kombi iz Supabasea (`app/src/lib/db.js`), ekran „Katalog i kombi" (dodaj/uredi/obriši artikl + uredi kombi). Anon REST čitanje potvrđeno. Naslov stranice popravljen.
+- **Sljedeći korak: F3** — narudžbe u bazi (tablice `order` + `order_item`; editor sprema/učitava narudžbu).
 - **Stack:** Vite + React + react-three-fiber · Supabase · Vercel. Odluke: npm, JavaScript, app u `app/`.
 
 ---
@@ -85,10 +82,10 @@ Poznata dugovanja (iz `issue.txt` i dogovora):
 - **Gotovo kad:** ista funkcionalnost kao demo, ali u novom stacku (izračun + 3D + korak utovara + plan istovara). ✅
 - Bonus: OrbitControls (drei) → touch rotacija + pinch-zoom ugrađeni; reaktivni izračun (bez „Izračunaj" gumba).
 
-### Faza 2 — Baza: katalog + kombi
+### Faza 2 — Baza: katalog + kombi ✅ GOTOVO
 - 🤖 Tablice: `article`, `vehicle`. CRUD ekran za katalog. Uređivanje jednog kombija.
-- 👤 Dati mi podatke za ~10-15 stvarnih artikala (brutto dim + težina) za seed.
-- **Gotovo kad:** katalog i kombi se čuvaju u bazi i mogu se uređivati.
+- 👤 Dati mi podatke za ~10-15 stvarnih artikala (brutto dim + težina) za seed. ← još stoji: seed su za sad demo-artikli; prave upisati kroz ekran „Katalog i kombi".
+- **Gotovo kad:** katalog i kombi se čuvaju u bazi i mogu se uređivati. ✅
 
 ### Faza 3 — Narudžbe u bazi
 - 🤖 Tablice `order`, `order_item`. Editor narudžbe čita katalog iz baze i sprema narudžbu.

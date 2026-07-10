@@ -63,3 +63,40 @@ tbody tr { border-bottom: 1px solid #f2f4f8; }
   .mini span { width: 20px; }
   .seg button { padding: 9px; }
 }
+
+/* --- zajednički gumbi --- */
+.btn { padding: 8px 12px; border: none; border-radius: 8px; background: #2a6df4; color: #fff; font-size: 13px; font-weight: 600; cursor: pointer; }
+.btn:disabled { opacity: .5; cursor: default; }
+.btn.ghost { background: #eef1f6; color: #33465e; border: 1px solid #cdd4df; }
+.btn.sm { padding: 5px 9px; font-size: 12px; }
+
+.panelhead { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.panelhead h1 { margin: 0; }
+
+.fullmsg { display: flex; align-items: center; justify-content: center; height: 100vh; padding: 24px; text-align: center; color: #33465e; font-size: 15px; line-height: 1.5; }
+.fullmsg.err { color: #b23c17; }
+
+/* --- katalog ekran --- */
+.catalog-page { height: 100%; overflow-y: auto; max-width: 720px; margin: 0 auto; padding: 18px 16px 60px; }
+.cathead { display: flex; align-items: center; gap: 12px; margin-bottom: 6px; }
+.cathead h2 { margin: 0; font-size: 18px; }
+.catalog h3 { font-size: 14px; margin: 18px 0 8px; }
+
+.cform { display: flex; flex-direction: column; gap: 10px; background: #f7f9fc; border: 1px solid #e2e7ef; border-radius: 10px; padding: 12px; }
+.cform label { display: flex; flex-direction: column; font-size: 12px; color: #5a6472; gap: 3px; }
+.cform input { padding: 7px 8px; border: 1px solid #cdd4df; border-radius: 6px; font-size: 14px; }
+.cform .frow { display: flex; gap: 8px; flex-wrap: wrap; }
+.cform .frow > label { flex: 1; min-width: 90px; }
+.cform .grow { flex: 2 !important; }
+.cform .check { flex-direction: row; align-items: center; gap: 6px; font-size: 13px; color: #33465e; }
+.cform .check input { width: auto; padding: 0; }
+.hintline { font-size: 11px; color: #9aa2b1; margin: 0; }
+
+.ctable { width: 100%; border-collapse: collapse; font-size: 13px; margin-bottom: 4px; }
+.ctable th, .ctable td { padding: 6px; border-bottom: 1px solid #eef1f5; text-align: center; }
+.ctable th.prod, .ctable td.prod { text-align: left; }
+.ctable thead th { font-size: 11px; color: #5a6472; }
+.ctable tr.editing { background: #eef5ff; }
+.ctable .actions { white-space: nowrap; }
+.link { background: none; border: none; color: #2a6df4; cursor: pointer; font-size: 12px; padding: 2px 4px; }
+.link.del { color: #b23c17; }
