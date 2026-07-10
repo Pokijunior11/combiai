@@ -6,13 +6,13 @@
 ---
 
 ## 0. Trenutni status / sljedeći korak
-- **F1 GOTOVO** ✅ (commit `d9e185e`): demo prenesen u React, radi lokalno (`npm run dev` u `app/`). Packer node-testiran (parity).
-- **F0 skoro gotovo:** kostur + Supabase ključevi (`app/.env`, gitignoreano) + git remote na `github.com/Pokijunior11/combiai`. **Ostaje:** 👤 `git push` + Vercel deploy.
-- **Kod je na GitHubu** ✅ `github.com/Pokijunior11/combiai` (main). (Napomena: koristi se račun Pokijunior11.)
-- **Sljedeći koraci:**
-  1. 🤖+👤 **Vercel**: import repo, **Root Directory = `app`**, dodati env varijable (VITE_SUPABASE_URL/ANON_KEY) → živi URL (dovršava F0).
-  2. **F2** — baza: SQL **pripremljen** (`supabase/f2_catalog_vehicle.sql`) → 👤 pokrenuti u Supabase SQL editoru. Zatim 🤖 spojiti app da čita katalog/kombi iz baze + CRUD ekran.
-     - Konvencija: dimenzije u **cm**, težina **kg**, **brutto**; app pretvara cm→m. RLS otvoren za anon (V1 dogovor).
+- **F0 GOTOVO** ✅ Živi URL: **https://combiai.vercel.app/** (auto-deploy na `git push`). Kod na `github.com/Pokijunior11/combiai` (main, račun Pokijunior11).
+- **F1 GOTOVO** ✅ (commit `d9e185e`): demo prenesen u React. Packer node-testiran (parity).
+- **F2 U TIJEKU:**
+  - SQL **pripremljen** (`supabase/f2_catalog_vehicle.sql`) → 👤 pokrenuti u Supabase SQL editoru (stvara `article`+`vehicle`, seed 8 artikala + kombi).
+  - Zatim 🤖: app čita katalog/kombi iz baze umjesto `catalog.js` + CRUD ekran za katalog.
+  - Konvencija: dimenzije **cm**, težina **kg**, **brutto**; app pretvara cm→m. RLS otvoren za anon (V1 dogovor).
+- **Sitnica za usput:** naslov stranice je još „app" → promijeniti u „CombiAI / Utovar kombija" (`app/index.html`).
 - **Stack:** Vite + React + react-three-fiber · Supabase · Vercel. Odluke: npm, JavaScript, app u `app/`.
 
 ---
@@ -75,10 +75,10 @@ Poznata dugovanja (iz `issue.txt` i dogovora):
 > Minimalno-prvo. Svaka faza: **cilj → gotovo kad (definition of done) → commit**. Radi se jedna po jedna.
 > „👤 Ti" = zadaci koje korisnik mora napraviti (računi, ključevi). „🤖 Ja" = kod/postavljanje.
 
-### Faza 0 — Kostur + živi URL (tracer bullet)
+### Faza 0 — Kostur + živi URL (tracer bullet) ✅ GOTOVO
 - 🤖 Novi Vite + React projekt + react-three-fiber. 🤖 Supabase klijent. 🤖 Deploy na Vercel.
-- 👤 Napraviti Supabase projekt i Vercel prijavu (GitHubom); dati mi URL/ključeve (anon key).
-- **Gotovo kad:** prazna app živi na Vercel URL-u i objavi se sama na `git push`.
+- 👤 Supabase projekt + Vercel prijava; ključevi dani.
+- **Gotovo kad:** app živi na Vercel URL-u i objavi se sama na `git push`. ✅ https://combiai.vercel.app/
 
 ### Faza 1 — Prijenos demoa u React (bez baze) ✅ GOTOVO (d9e185e)
 - 🤖 Packer + 3D prikaz + editor iz `demo-utovar-kombija.html` prebaciti u React/r3f, podaci u memoriji.
