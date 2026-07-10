@@ -6,9 +6,9 @@
 ---
 
 ## 0. Trenutni status / sljedeći korak
-- **Faza:** planiranje prave aplikacije (Kolosijek A), još prije koda.
-- **Upravo radimo:** definiramo proizvod — tko koristi, kako, treba li baza, odakle podaci.
-- **Sljedeći korak:** odgovoriti na otvorena pitanja u sekciji 3 (jedno po jedno), pa iz toga složiti fazni plan (sekcija 5).
+- **Faza:** planiranje (Kolosijek A) ✅ ZAVRŠENO (P1–P8). Fazni plan složen (sekcija 5).
+- **Sljedeći korak:** **Faza 0 — Kostur + živi URL.** Čeka se 👤 korisnik: napraviti Supabase projekt + Vercel prijavu (GitHubom) i dati anon key/URL.
+- **Stack potvrđen:** Vite + React + react-three-fiber · Supabase · Vercel.
 
 ---
 
@@ -34,14 +34,21 @@ Dogovorena pravila (v1 logike):
 ## 3. Kolosijek A — proizvod/arhitektura (🔜 ODLUČUJEMO SAD)
 Otvorena pitanja (rješavamo jedno po jedno, svako s preporukom):
 
-- [ ] **P1. Korisnici i scenarij** — tko primarno koristi (planer u uredu? skladištar na mobu? vozač? vlasnik?). *Preporuka: primarni = planer (desktop) koji sprema plan, sekundarni = skladištar (mobitel) koji ga izvršava.*
-- [ ] **P2. Single-company ili SaaS** — interni alat za jednu firmu ili proizvod za više firmi (multi-tenant)?
-- [ ] **P3. Baza — treba li i za što** (spremanje narudžbi, plana, kataloga robe, vozila, korisnika)?
-- [ ] **P4. Odakle dolaze narudžbe** — ručni unos, uvoz (Excel/CSV), ili integracija s postojećim ERP/webshopom?
-- [ ] **P5. Katalog robe** — odakle stvarne dimenzije/kilaže (ručni unos, baza dobavljača, barkod)?
-- [ ] **P6. Prijava/računi** — treba li login, uloge (planer/skladištar/admin)?
-- [ ] **P7. Platforma i stack** — web (React?), PWA za mobitel, hosting?
-- [ ] **P8. Definicija „minimalne prave verzije" (V1)** — najmanji skup da je stvarno upotrebljivo u pogonu.
+- [x] **P1. Korisnici i scenarij** ✅ **ODLUČENO:** primarni = **planer/disponent** (ured, desktop) koji složi i **spremi** plan; sekundarni = **skladištar** (mobitel/tablet) koji spremljeni plan **otvori i prati** pri utovaru.
+- [x] **P2. Single-company ili SaaS** ✅ **ODLUČENO:** V1 = **single-tenant** (jedna firma), ali podatkovni model postavljamo čisto da se **multi-tenant (SaaS) doda kasnije** bez rušenja. SaaS infrastruktura se NE gradi u V1.
+- [x] **P3. Baza** ✅ **ODLUČENO:** treba (scenarij planer↔skladištar traži dijeljeno spremanje). Tehnologija = **Supabase** (PostgreSQL + prijava + API + hosting u jednom). Spremamo: vozila, katalog robe, narudžbe, spremljene planove. Besplatni plan za početak.
+- [x] **P4. Odakle dolaze narudžbe** ✅ **ODLUČENO:** V1 = **ručni unos (A)**. Sljedeća iteracija = **uvoz Excel/CSV (B)**. Dugoročni cilj = **integracija (C)**.
+  - **Stvarni sustavi (za roadmap B/C):** narudžbe ulaze preko **PrestaShop** (ima REST API + težinu/dimenzije po artiklu); otpremnice se rade u **Synesis** (ERP, izlazna strana). Težnja je automatizacija.
+- [x] **P5. Katalog robe** ✅ **ODLUČENO:** V1 = **ručni katalog u našoj bazi**, kasnije punjen/sinkroniziran iz **Excela proizvođača** (tamo su stvarni podaci; PrestaShop ih NEMA).
+  - **DOMENSKO PRAVILO:** za utovar se koriste **BRUTTO** (zapakirane) dimenzije i težina — tovari se artikl u kutiji. Netto podatke možemo čuvati info, ali packer računa brutto.
+  - Korisnik ima Excele više proizvođača sa svim podacima (netto + brutto) → kandidat za jednokratni uvoz pri seedanju kataloga (odlučiti u faznom planu).
+- [x] **P6. Prijava/računi** ✅ **ODLUČENO:** V1 = **jedan zajednički račun, bez vidljive prijave**. App se automatski autentificira u pozadini; sesija se sama obnavlja da radnici nikad ne zapnu na loginu. Nema uloga (svi mogu sve).
+  - Kompromis (prihvaćen): nema razlikovanja planer/skladištar, i tko ima URL može pristupiti → OK za interni alat. Prave račune + uloge dodajemo kasnije ako zatreba.
+  - Opcionalno kasnije bez logina: obični „mod" prekidač (planer/skladištar pogled) radi jednostavnijeg ekrana skladištaru.
+- [x] **P7. Platforma i stack** ✅ **ODLUČENO:** **Vite + React + react-three-fiber** (logika slaganja iz demoa se prenosi), backend/baza **Supabase**, hosting **Vercel** (auto-deploy iz gita). Responsive web (kao demo); PWA kasnije po potrebi. Korisnik ima GitHub; Vercel se poveže GitHub prijavom.
+- [x] **P8. Definicija V1** ✅ **ODLUČENO:** V1 = katalog (ručno seedan) + **jedan** kombi + unos narudžbe + izračun plana + spremanje + otvaranje na drugom uređaju (skladištar). NE uključuje: Excel uvoz, PrestaShop/Synesis, prave račune, Kolosijek B, multi-tenant, PWA, ispis.
+  - Vozila: **samo jedan kombi** u V1.
+  - Katalog: **ručno seedanje** ~10-15 stvarnih artikala.
 
 ---
 
@@ -55,9 +62,39 @@ Poznata dugovanja (iz `issue.txt` i dogovora):
 
 ---
 
-## 5. Fazni plan (popunjava se nakon sekcije 3)
-> Minimalno-prvo. Svaka faza: cilj → gotovo kad → commit.
-- (TBD nakon što zaključimo Kolosijek A)
+## 5. Fazni plan (V1)
+> Minimalno-prvo. Svaka faza: **cilj → gotovo kad (definition of done) → commit**. Radi se jedna po jedna.
+> „👤 Ti" = zadaci koje korisnik mora napraviti (računi, ključevi). „🤖 Ja" = kod/postavljanje.
+
+### Faza 0 — Kostur + živi URL (tracer bullet)
+- 🤖 Novi Vite + React projekt + react-three-fiber. 🤖 Supabase klijent. 🤖 Deploy na Vercel.
+- 👤 Napraviti Supabase projekt i Vercel prijavu (GitHubom); dati mi URL/ključeve (anon key).
+- **Gotovo kad:** prazna app živi na Vercel URL-u i objavi se sama na `git push`.
+
+### Faza 1 — Prijenos demoa u React (bez baze)
+- 🤖 Packer + 3D prikaz + editor iz `demo-utovar-kombija.html` prebaciti u React/r3f, podaci u memoriji.
+- **Gotovo kad:** ista funkcionalnost kao demo, ali u novom stacku (izračun + 3D + korak utovara + plan istovara).
+
+### Faza 2 — Baza: katalog + kombi
+- 🤖 Tablice: `article`, `vehicle`. CRUD ekran za katalog. Uređivanje jednog kombija.
+- 👤 Dati mi podatke za ~10-15 stvarnih artikala (brutto dim + težina) za seed.
+- **Gotovo kad:** katalog i kombi se čuvaju u bazi i mogu se uređivati.
+
+### Faza 3 — Narudžbe u bazi
+- 🤖 Tablice `order`, `order_item`. Editor narudžbe čita katalog iz baze i sprema narudžbu.
+- **Gotovo kad:** planer složi i spremi narudžbu; ostane spremljena.
+
+### Faza 4 — Generiranje i spremanje plana
+- 🤖 Tablica `plan`. Pokreni packer nad spremljenom narudžbom, spremi rezultat.
+- **Gotovo kad:** plan se generira iz narudžbe i trajno sprema.
+
+### Faza 5 — Otvaranje plana na drugom uređaju (skladištar)
+- 🤖 Popis spremljenih planova → otvori jedan → mobilni prikaz s korakom utovara i planom istovara.
+- **Gotovo kad:** planer spremi na desktopu, skladištar otvori na mobitelu i prati utovar. Scenarij radi od početka do kraja.
+
+### Faza 6 — Dorada za stvarnu upotrebu
+- 🤖 Auto zajednička sesija (bez logina), prazna/greška stanja, mobilni QA.
+- **Gotovo kad:** upotrebljivo u pogonu bez čudnih rubnih situacija.
 
 ---
 
@@ -65,3 +102,11 @@ Poznata dugovanja (iz `issue.txt` i dogovora):
 - **2026-07-10** Demo validiran, prelazimo na planiranje prave app.
 - **2026-07-10** Proces rada: `CLAUDE.md` (auto) + ovaj `PLAN.md` (izvor istine) + git po fazama + `/handoff` za prekid usred posla.
 - **2026-07-10** Kolosijek B (logika) odvojen od Kolosijeka A (proizvod) da ne blokira napredak.
+- **2026-07-10** P1: primarni korisnik = planer (desktop, sprema plan); sekundarni = skladištar (mobitel, izvršava plan).
+- **2026-07-10** P2: V1 single-tenant, dizajn spreman za kasniji multi-tenant/SaaS.
+- **2026-07-10** P3: baza = Supabase (PostgreSQL). Daje i prijavu + API + hosting → utječe na P6/P7.
+- **2026-07-10** P4: V1 ručni unos → B uvoz (Excel/CSV) → C integracija. Sustavi: PrestaShop (ulaz narudžbi, ima API+dimenzije), Synesis (otpremnice/ERP).
+- **2026-07-10** P5: V1 ručni katalog; stvarni podaci iz Excela proizvođača (PrestaShop nema dim/tež). Packer koristi BRUTTO dimenzije/težinu.
+- **2026-07-10** P6: V1 bez vidljive prijave — jedan zajednički račun, auto-sesija, bez uloga. Prioritet: radnik ne smije zapeti na loginu.
+- **2026-07-10** P7: stack = Vite + React + react-three-fiber; baza Supabase; hosting Vercel (auto-deploy iz GitHuba).
+- **2026-07-10** P8: V1 opseg definiran (katalog + 1 kombi + narudžba + izračun + spremanje + otvaranje na mobitelu). Vozila: jedan kombi. Katalog: ručno seedanje. → Fazni plan (sekcija 5) složen, planiranje gotovo.
