@@ -66,6 +66,10 @@ Poznata dugovanja (iz `issue.txt` i dogovora):
 
 ---
 
+## 4b. UI/UX dorade (backlog — nakon što V1 radi od kraja do kraja)
+> Izgled/osjećaj React app-a vs demo. Ne blokira F2–F6. Triježa: neke sitnice možda uđu u V1 ako su brze.
+- [ ] (popuniti — korisnik nabraja razlike/popravke uočene na React verziji)
+
 ## 5. Fazni plan (V1)
 > Minimalno-prvo. Svaka faza: **cilj → gotovo kad (definition of done) → commit**. Radi se jedna po jedna.
 > „👤 Ti" = zadaci koje korisnik mora napraviti (računi, ključevi). „🤖 Ja" = kod/postavljanje.
