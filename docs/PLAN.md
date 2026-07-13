@@ -8,7 +8,9 @@
 ## 0. Trenutni status / sljedeći korak
 - **F0 GOTOVO** ✅ Živi URL: **https://combiai.vercel.app/** (auto-deploy na `git push`). Kod na `github.com/Pokijunior11/combiai` (main, račun Pokijunior11).
 - **F1 GOTOVO** ✅ (commit `d9e185e`): demo prenesen u React. Packer node-testiran (parity).
-- **F2 GOTOVO** ✅ SQL pokrenut (tablice + seed u bazi), app čita katalog/kombi iz Supabasea (`app/src/lib/db.js`), ekran „Katalog i kombi" (dodaj/uredi/obriši artikl + uredi kombi). Anon REST čitanje potvrđeno. Naslov stranice popravljen.
+- **F2 GOTOVO** ✅ **i potvrđeno na produkciji** (combiai.vercel.app radi). App čita katalog/kombi iz Supabasea, ekran „Katalog i kombi" (CRUD + uredi kombi).
+  - Riješen bug: „Headers Invalid value" = novi red u anon ključu na Vercelu → dodan `.trim()` u `supabase.js`. Lekcija: env „radi lokalno, ne na prod" → posumnjaj na razmak/novi red.
+- **Lokalni dev:** `npm run dev -- --port 5190 --strictPort` (port 5190, jer 5173/5174 zauzima drugi projekt na računalu).
 - **Sljedeći korak: F3** — narudžbe u bazi (tablice `order` + `order_item`; editor sprema/učitava narudžbu).
 - **Stack:** Vite + React + react-three-fiber · Supabase · Vercel. Odluke: npm, JavaScript, app u `app/`.
 
