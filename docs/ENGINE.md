@@ -22,10 +22,19 @@ Sva stvarna pravila slaganja. Popunjava se kroz razgovor.
 - **„Iza" (dublje prema kabini) = ZABRANJENO:** roba kasnijeg kupca ne smije zarobiti robu ranijeg prema vratima. Nema kopanja u dubinu. Ako to znači da nešto ne stane → prijavi „ne stane".
 - **„Odozgo" u istom redu = DOPUŠTENO:** jedno na drugom od dva različita kupca je OK (skladištar samo podigne s vrha). Svesti na minimum.
 
-### 1.4 Poznati problemi trenutnog motora (test-scenariji)
-- **CASE-1 (kritičan): dodavanje jedne MIKROVALNE izbaci DVA FRIŽIDERA** kao neutovarena. Apsurdno (sitno izbacuje ogromno) = lažni „ne stane" + nestabilnost pohlepnog motora. **Prvi cilj popravka.** (Reproducirati: točan sadržaj kupaca — čeka se od korisnika.)
+### 1.4 GLAVNA DIJAGNOZA (iz 4 screenshota, 2026-07-13)
+**Male lagane stvari (mikrovalne) idu na POD umjesto na VRH frižidera.** Frižider 185 cm u kombiju 230 cm → 45 cm „tavana" iznad svakog frižidera je idealan za mikrovalne. Motor ih baca na pod → kradu mjesto frižiderima → lažni „ne stane".
+
+Test-scenariji (katalog: hladnjak 60×65×185/75kg, mikrovalna 50×40×30/15kg liježe, sušilica 60×60×85/35kg):
+- **CASE-1a (radi):** K1{hladnjak1, mikrovalna16, susilica2} K2{hladnjak4} K3{hladnjak7} → 30 kom, sve stane, 55.6%.
+- **CASE-1b (BUG):** isto ali mikrovalna17 → **2 hladnjaka NE STANU**. Apsurd: dodaš 1 mikrovalnu, ispadnu 2 frižidera. 12 frižidera lako stane na pod (potrebno ~4.7 m² od 8 m²) — mikrovalne im kradu pod.
+- **CASE-2 (radi ok):** K2 mikrovalne sjednu na K2 frižidere (isti kupac ima frižidere).
+- **CASE-3 (LIFO):** K3 mikrovalne završe nedostupno („predaleko") → 2 pomicanja; trebale bi biti na vrhu/u prvom redu do K3.
+
+Ciljevi popravka (redom): (1) male na vrh frižidera (fill „tavana"), ne na pod; (2) NIKAD izbaciti veliko zbog malog (ocjena po volumenu, ne po broju komada); (3) male slagati LIFO-dostupno; (4) stabilnost (mala promjena ≠ velika preslagivanja).
+
+### 1.5 Ostalo
 - Polegnuti frižider: fiksno 4 u vis; ne razmatra uspravljanje da npr. sušilica dođe gore.
-- Pohlepno slaganje ostavlja rupe / prevelike razmake.
 
 ### Metodologija procjene
 - **Procjenjuje se CIJELA narudžba** (motor pakira sve odjednom; klizač „korak po korak" je samo repriza rezultata).
