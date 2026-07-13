@@ -134,3 +134,26 @@ export async function deleteOrder(id) {
   const { error } = await supabase.from('orders').delete().eq('id', id)
   if (error) throw error
 }
+
+// ---------- PLANOVI (zamrznuti izračun za skladištara) ----------
+export async function savePlan({ name, orderId, data }) {
+  const { data: row, error } = await supabase
+    .from('plan').insert({ name: name.trim(), order_id: orderId || null, data }).select('id').single()
+  if (error) throw error
+  return row.id
+}
+export async function listPlans() {
+  const { data, error } = await supabase
+    .from('plan').select('id,name,created_at').order('created_at', { ascending: false })
+  if (error) throw error
+  return data
+}
+export async function loadPlan(id) {
+  const { data, error } = await supabase.from('plan').select('*').eq('id', id).single()
+  if (error) throw error
+  return data
+}
+export async function deletePlan(id) {
+  const { error } = await supabase.from('plan').delete().eq('id', id)
+  if (error) throw error
+}

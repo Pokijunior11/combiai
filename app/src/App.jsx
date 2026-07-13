@@ -3,10 +3,12 @@ import { Canvas } from '@react-three/fiber'
 import { OrbitControls } from '@react-three/drei'
 import { DEFAULT_CUSTOMERS, EXAMPLES } from './data/catalog'
 import { computeBest } from './lib/packer'
-import { fetchArticles, fetchVehicle, saveOrder, loadOrder } from './lib/db'
+import { fetchArticles, fetchVehicle, saveOrder, loadOrder, savePlan } from './lib/db'
 import VanScene from './components/VanScene'
 import CatalogEditor from './components/CatalogEditor'
 import OrdersList from './components/OrdersList'
+import PlansList from './components/PlansList'
+import PlanView from './components/PlanView'
 import './App.css'
 
 const cloneCust = (c) => c.map((x) => ({ ...x, qty: { ...x.qty } }))
@@ -31,6 +33,11 @@ export default function App() {
   const [error, setError] = useState('')
   const [notice, setNotice] = useState('')
   const flash = (m) => { setNotice(m); setTimeout(() => setNotice(''), 2500) }
+  const [activePlanId, setActivePlanId] = useState(() => {
+    try { return new URLSearchParams(window.location.search).get('plan') } catch { return null }
+  })
+  const openPlan = (id) => { setActivePlanId(id); window.history.pushState({}, '', `?plan=${id}`) }
+  const exitPlan = () => { setActivePlanId(null); window.history.pushState({}, '', window.location.pathname) }
 
   const productsById = useMemo(
     () => Object.fromEntries(productList.map((p) => [p.id, p])),
@@ -112,6 +119,29 @@ export default function App() {
     } catch (e) { flash('Greška pri otvaranju: ' + e.message) }
   }
 
+  const savePlanHandler = async () => {
+    if (!best) { flash('Nema izračunatog plana za spremiti.'); return }
+    const name = window.prompt('Naziv plana (za skladištara):', `Plan ${new Date().toLocaleDateString('hr-HR')}`)
+    if (!name) return
+    const snapshot = {
+      vehicle: { name: vehicle.name, L: vehicle.L, W: vehicle.W, H: vehicle.H, payload: vehicle.payload },
+      boxes: best.placed.map((p) => ({ x: p.x, y: p.y, z: p.z, dx: p.dx, dy: p.dy, dz: p.dz, color: p.color, name: p.name, custName: p.custName, custIdx: p.custIdx, weight: p.weight })),
+      unplaced: best.unplaced.map((u) => ({ name: u.name })),
+      weight: best.weight,
+      moves: best.up.moves,
+      unloadSteps: best.up.steps,
+      customers: active.map((c) => ({ name: c.name, color: c.color })),
+    }
+    try {
+      const id = await savePlan({ name, orderId: null, data: snapshot })
+      flash('Plan spremljen ✓')
+      openPlan(id)
+    } catch (e) { flash('Greška pri spremanju plana: ' + e.message) }
+  }
+
+  // ---- ekran: PLAN ZA SKLADIŠTARA (otvoren preko ?plan= linka ili iz popisa) ----
+  if (activePlanId) return <PlanView planId={activePlanId} onExit={exitPlan} />
+
   // ---- stanja učitavanja ----
   if (loading) return <div className="fullmsg">Učitavam podatke…</div>
   if (error) return <div className="fullmsg err">Greška pri spajanju na bazu:<br />{error}</div>
@@ -120,6 +150,11 @@ export default function App() {
   // ---- ekran: NARUDŽBE ----
   if (view === 'orders') {
     return <OrdersList onOpen={openOrder} onBack={() => setView('plan')} />
+  }
+
+  // ---- ekran: PLANOVI ----
+  if (view === 'plans') {
+    return <PlansList onOpen={openPlan} onBack={() => setView('plan')} />
   }
 
   // ---- ekran: KATALOG ----
@@ -159,6 +194,8 @@ export default function App() {
         <div className="toolbar">
           <button className="btn sm" onClick={saveCurrentOrder}>Spremi narudžbu</button>
           <button className="btn ghost sm" onClick={() => setView('orders')}>Narudžbe</button>
+          <button className="btn sm" onClick={savePlanHandler}>Spremi plan</button>
+          <button className="btn ghost sm" onClick={() => setView('plans')}>Planovi</button>
           <button className="btn ghost sm" onClick={() => setView('catalog')}>Katalog i kombi</button>
         </div>
 
