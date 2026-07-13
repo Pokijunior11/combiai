@@ -17,8 +17,9 @@
   - **Planer**: „Planiraj novi utovar" ili „uredi" → editor → „Spremi utovar".
   - Podatkovni model: koriste se `orders`/`order_customer`/`order_item` (tablica `plan` iz f4 sad se NE koristi — može ostati prazna).
   - Novi/refaktorirani: HomeList, UtovarView, VanStage, ResultPanel; App presložen; obrisani OrdersList/PlansList/PlanView.
-- **F3/F4/F5 objedinjeni u „Utovar" tok** ✅ (kod gotov, build prolazi).
-- **Ostaje: F6** — dorada (auto-sesija/bez logina, rubna stanja, mobilni QA, možda auto-osvježavanje popisa).
+- **F3/F4/F5 objedinjeni u „Utovar" tok** ✅ **POTVRĐENO od korisnika** („to je upravo to što sam htio").
+- **VELIKI SLJEDEĆI KORAK: Kolosijek B — motor slaganja.** Korisnik naglašava da je to srce aplikacije i da ima najviše popravaka (vidi `issue.txt`). Zaslužuje vlastiti ciklus (grillanje + testovi). Prije toga: korisnik skuplja konkretne primjere (koja roba/kupci → što je krivo).
+- **Ostaje i: F6** — sitna dorada (rubna stanja, mobilni QA, možda auto-osvježavanje popisa). Login nije potreban (nema ga — zajednički pristup).
 - **Stack:** Vite + React + react-three-fiber · Supabase · Vercel. Odluke: npm, JavaScript, app u `app/`.
 
 ---
@@ -75,7 +76,8 @@ Poznata dugovanja (iz `issue.txt` i dogovora):
 
 ## 4b. UI/UX dorade (backlog — nakon što V1 radi od kraja do kraja)
 > Izgled/osjećaj React app-a vs demo. Ne blokira F2–F6. Triježa: neke sitnice možda uđu u V1 ako su brze.
-- [ ] (popuniti — korisnik nabraja razlike/popravke uočene na React verziji)
+- [ ] Sakriti „uredi/obriši" od skladištara (uloge planer/skladištar). **Nisko prioritetno** — korisnik OK da za sad ostane (interni alat, neće se zloupotrebljavati).
+- [ ] (ostale sitnice — korisnik nabraja kad uoči)
 
 ## 5. Fazni plan (V1)
 > Minimalno-prvo. Svaka faza: **cilj → gotovo kad (definition of done) → commit**. Radi se jedna po jedna.
@@ -96,17 +98,9 @@ Poznata dugovanja (iz `issue.txt` i dogovora):
 - 👤 Dati mi podatke za ~10-15 stvarnih artikala (brutto dim + težina) za seed. ← još stoji: seed su za sad demo-artikli; prave upisati kroz ekran „Katalog i kombi".
 - **Gotovo kad:** katalog i kombi se čuvaju u bazi i mogu se uređivati. ✅
 
-### Faza 3 — Narudžbe u bazi
-- 🤖 Tablice `order`, `order_item`. Editor narudžbe čita katalog iz baze i sprema narudžbu.
-- **Gotovo kad:** planer složi i spremi narudžbu; ostane spremljena.
-
-### Faza 4 — Generiranje i spremanje plana
-- 🤖 Tablica `plan`. Pokreni packer nad spremljenom narudžbom, spremi rezultat.
-- **Gotovo kad:** plan se generira iz narudžbe i trajno sprema.
-
-### Faza 5 — Otvaranje plana na drugom uređaju (skladištar)
-- 🤖 Popis spremljenih planova → otvori jedan → mobilni prikaz s korakom utovara i planom istovara.
-- **Gotovo kad:** planer spremi na desktopu, skladištar otvori na mobitelu i prati utovar. Scenarij radi od početka do kraja.
+### Faze 3–5 — objedinjene u „Utovar" tok ✅ GOTOVO i POTVRĐENO
+- Jedan pojam „Utovar" (roba + preračunati raspored). Početni ekran = popis; planer spremi/uredi; skladištar „Otvori" → read-only upute.
+- **Gotovo kad:** planer složi i spremi utovar, skladištar ga otvori na mobitelu i prati. ✅ Korisnik potvrdio „to je upravo to što sam htio".
 
 ### Faza 6 — Dorada za stvarnu upotrebu
 - 🤖 Auto zajednička sesija (bez logina), prazna/greška stanja, mobilni QA.
