@@ -3,6 +3,12 @@
 > Cilj: složiti robu tako da **što više stane** i da je **fizički ispravno/stabilno**, uz poštovanje istovara (LIFO).
 > Pristup: **Pravilnik → Mjerilo → Test-scenariji → Iteracija algoritma** (svaka promjena se mjeri).
 
+## STATUS (gdje smo stali)
+- ✅ Dijagnoza gotova (sekcija 1.4): male stvari (mikrovalne) idu na POD umjesto na VRH → lažni „ne stane".
+- ✅ Mjerilo spremno: `node tools/packer-bench.mjs` reproducira sve slučajeve (CASE-1a/1b/3/4 + REF).
+- ⏳ Popravak NIJE uveden. (Probni pristup — „dvije faze: struktura na pod, fileri na vrh" + ocjena po volumenu — je radio na CASE-1b, ali je povećao pomicanja; vraćen jer je korisnik htio krenuti čišće.)
+- ▶️ **Sljedeći korak:** uvesti popravak PAŽLJIVO, uz mjerenje na `packer-bench` (motor je u `app/src/lib/packer.js`). Ideja koja je obećavala: probati i „fileri na pod" i „fileri na vrh" pa izabrati po (max volumen, pa min pomicanja) — najbolje od oba.
+
 ## 1. Pravilnik (rulebook) — u izradi (grillanje)
 Sva stvarna pravila slaganja. Popunjava se kroz razgovor.
 
