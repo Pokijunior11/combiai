@@ -130,6 +130,29 @@ export async function loadOrder(id) {
   return { id: ord.id, name: ord.name, vehicleId: ord.vehicle_id, customers }
 }
 
+export async function updateOrder(id, { name, vehicleId, customers }) {
+  const { error: e0 } = await supabase.from('orders')
+    .update({ name: name.trim(), vehicle_id: vehicleId, updated_at: new Date().toISOString() }).eq('id', id)
+  if (e0) throw e0
+  // zamijeni kupce/stavke (cascade briše stare stavke)
+  const { error: e1 } = await supabase.from('order_customer').delete().eq('order_id', id)
+  if (e1) throw e1
+  const custRows = customers.map((c, i) => ({ order_id: id, name: c.name, color: c.color, position: i }))
+  const { data: custs, error: e2 } = await supabase.from('order_customer').insert(custRows).select()
+  if (e2) throw e2
+  const items = []
+  customers.forEach((c, i) => {
+    const cust = custs.find((x) => x.position === i)
+    for (const [articleId, qty] of Object.entries(c.qty || {})) {
+      if (qty > 0) items.push({ order_customer_id: cust.id, article_id: articleId, qty })
+    }
+  })
+  if (items.length) {
+    const { error: e3 } = await supabase.from('order_item').insert(items)
+    if (e3) throw e3
+  }
+}
+
 export async function deleteOrder(id) {
   const { error } = await supabase.from('orders').delete().eq('id', id)
   if (error) throw error

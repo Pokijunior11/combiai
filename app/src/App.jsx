@@ -1,18 +1,15 @@
 import { useMemo, useState, useEffect } from 'react'
-import { Canvas } from '@react-three/fiber'
-import { OrbitControls } from '@react-three/drei'
 import { DEFAULT_CUSTOMERS, EXAMPLES } from './data/catalog'
 import { computeBest } from './lib/packer'
-import { fetchArticles, fetchVehicle, saveOrder, loadOrder, savePlan } from './lib/db'
-import VanScene from './components/VanScene'
+import { fetchArticles, fetchVehicle, saveOrder, updateOrder, loadOrder } from './lib/db'
 import CatalogEditor from './components/CatalogEditor'
-import OrdersList from './components/OrdersList'
-import PlansList from './components/PlansList'
-import PlanView from './components/PlanView'
+import HomeList from './components/HomeList'
+import UtovarView from './components/UtovarView'
+import VanStage from './components/VanStage'
+import ResultPanel from './components/ResultPanel'
 import './App.css'
 
 const cloneCust = (c) => c.map((x) => ({ ...x, qty: { ...x.qty } }))
-// mapiraj količine iz šifri (npr. 'perilica') u id-eve iz baze
 const mapQty = (codeQty, codeToId) => {
   const out = {}
   for (const [code, n] of Object.entries(codeQty || {})) {
@@ -21,73 +18,73 @@ const mapQty = (codeQty, codeToId) => {
   }
   return out
 }
+const emptyCustomers = () => DEFAULT_CUSTOMERS.map((c) => ({ name: c.name, color: c.color, qty: {} }))
 
 export default function App() {
   const [productList, setProductList] = useState([])
   const [vehicle, setVehicle] = useState(null)
-  const [customers, setCustomers] = useState([])
-  const [numCust, setNumCust] = useState(3)
-  const [step, setStep] = useState(0)
-  const [view, setView] = useState('plan') // 'plan' | 'catalog' | 'orders'
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [notice, setNotice] = useState('')
   const flash = (m) => { setNotice(m); setTimeout(() => setNotice(''), 2500) }
-  const [activePlanId, setActivePlanId] = useState(() => {
-    try { return new URLSearchParams(window.location.search).get('plan') } catch { return null }
-  })
-  const openPlan = (id) => { setActivePlanId(id); window.history.pushState({}, '', `?plan=${id}`) }
-  const exitPlan = () => { setActivePlanId(null); window.history.pushState({}, '', window.location.pathname) }
 
-  const productsById = useMemo(
-    () => Object.fromEntries(productList.map((p) => [p.id, p])),
-    [productList],
-  )
+  const [view, setView] = useState('home') // 'home' | 'edit' | 'view' | 'catalog'
+  const [viewId, setViewId] = useState(null)   // utovar koji skladištar gleda
+  const [editId, setEditId] = useState(null)   // utovar koji planer uređuje (null = novi)
+  const [editName, setEditName] = useState('')
+  const [customers, setCustomers] = useState(emptyCustomers())
+  const [numCust, setNumCust] = useState(3)
+
+  const productsById = useMemo(() => Object.fromEntries(productList.map((p) => [p.id, p])), [productList])
+  const codeToId = useMemo(() => Object.fromEntries(productList.filter((p) => p.code).map((p) => [p.code, p.id])), [productList])
 
   async function initialLoad() {
     setLoading(true); setError('')
     try {
       const [arts, veh] = await Promise.all([fetchArticles(), fetchVehicle()])
-      const c2i = Object.fromEntries(arts.filter((p) => p.code).map((p) => [p.code, p.id]))
       setProductList(arts)
       setVehicle(veh)
-      setCustomers(DEFAULT_CUSTOMERS.map((c) => ({ name: c.name, color: c.color, qty: mapQty(c.qty, c2i) })))
-    } catch (e) {
-      setError(e.message || String(e))
-    } finally {
-      setLoading(false)
-    }
+    } catch (e) { setError(e.message || String(e)) } finally { setLoading(false) }
   }
-  // refetch nakon uređivanja kataloga — NE dira trenutnu narudžbu
   async function refetchCatalog() {
     const [arts, veh] = await Promise.all([fetchArticles(), fetchVehicle()])
-    setProductList(arts)
-    setVehicle(veh)
+    setProductList(arts); setVehicle(veh)
   }
-
   useEffect(() => { initialLoad() }, [])
 
   const active = customers.slice(0, numCust)
-  const codeToId = useMemo(
-    () => Object.fromEntries(productList.filter((p) => p.code).map((p) => [p.code, p.id])),
-    [productList],
-  )
-
   const best = useMemo(() => {
-    if (!vehicle || productList.length === 0 || customers.length === 0) return null
+    if (!vehicle || productList.length === 0) return null
     return computeBest(active, vehicle, productsById)
   }, [customers, numCust, vehicle, productsById])
 
-  const boxesSorted = useMemo(() => {
-    if (!best) return []
-    return best.placed.slice().sort((a, b) => a.x - b.x || a.y - b.y || a.z - b.z).map((p, i) => ({ ...p, step: i }))
-  }, [best])
+  // ---- navigacija ----
+  const goNew = () => {
+    setCustomers(emptyCustomers()); setNumCust(3); setEditId(null); setEditName(''); setView('edit')
+  }
+  const goEdit = async (id) => {
+    try {
+      const ord = await loadOrder(id)
+      const padded = [0, 1, 2].map((i) => ord.customers[i] || { name: DEFAULT_CUSTOMERS[i].name, color: DEFAULT_CUSTOMERS[i].color, qty: {} })
+      setCustomers(padded); setNumCust(Math.min(3, Math.max(2, ord.customers.length)))
+      setEditId(id); setEditName(ord.name); setView('edit')
+    } catch (e) { flash('Greška pri otvaranju: ' + e.message) }
+  }
+  const goView = (id) => { setViewId(id); setView('view') }
 
-  const n = boxesSorted.length
-  useEffect(() => { setStep(n) }, [n])
-  const visible = step >= n ? boxesSorted : boxesSorted.filter((p) => p.step < step)
+  const saveUtovar = async () => {
+    const suggested = editName || `Utovar ${new Date().toLocaleDateString('hr-HR')}`
+    const name = window.prompt('Naziv utovara:', suggested)
+    if (!name) return
+    try {
+      if (editId) await updateOrder(editId, { name, vehicleId: vehicle.id, customers: active })
+      else await saveOrder({ name, vehicleId: vehicle.id, customers: active })
+      flash('Utovar spremljen ✓')
+      setView('home')
+    } catch (e) { flash('Greška pri spremanju: ' + e.message) }
+  }
 
-  // uređivanje narudžbe
+  // ---- uređivanje ----
   const changeQty = (ci, id, d) => {
     setCustomers((prev) => {
       const next = cloneCust(prev)
@@ -99,62 +96,14 @@ export default function App() {
     setCustomers((prev) => prev.map((c, i) => ({ ...c, qty: EXAMPLES[x][i] ? mapQty(EXAMPLES[x][i], codeToId) : {} })))
   }
 
-  const saveCurrentOrder = async () => {
-    const suggested = `Utovar ${new Date().toLocaleDateString('hr-HR')}`
-    const name = window.prompt('Naziv narudžbe:', suggested)
-    if (!name) return
-    try {
-      await saveOrder({ name, vehicleId: vehicle.id, customers: active })
-      flash('Narudžba spremljena ✓')
-    } catch (e) { flash('Greška pri spremanju: ' + e.message) }
-  }
-  const openOrder = async (id) => {
-    try {
-      const ord = await loadOrder(id)
-      const padded = [0, 1, 2].map((i) => ord.customers[i] || { name: DEFAULT_CUSTOMERS[i].name, color: DEFAULT_CUSTOMERS[i].color, qty: {} })
-      setCustomers(padded)
-      setNumCust(Math.min(3, Math.max(2, ord.customers.length)))
-      setView('plan')
-      flash(`Otvorena narudžba: ${ord.name}`)
-    } catch (e) { flash('Greška pri otvaranju: ' + e.message) }
-  }
-
-  const savePlanHandler = async () => {
-    if (!best) { flash('Nema izračunatog plana za spremiti.'); return }
-    const name = window.prompt('Naziv plana (za skladištara):', `Plan ${new Date().toLocaleDateString('hr-HR')}`)
-    if (!name) return
-    const snapshot = {
-      vehicle: { name: vehicle.name, L: vehicle.L, W: vehicle.W, H: vehicle.H, payload: vehicle.payload },
-      boxes: best.placed.map((p) => ({ x: p.x, y: p.y, z: p.z, dx: p.dx, dy: p.dy, dz: p.dz, color: p.color, name: p.name, custName: p.custName, custIdx: p.custIdx, weight: p.weight })),
-      unplaced: best.unplaced.map((u) => ({ name: u.name })),
-      weight: best.weight,
-      moves: best.up.moves,
-      unloadSteps: best.up.steps,
-      customers: active.map((c) => ({ name: c.name, color: c.color })),
-    }
-    try {
-      const id = await savePlan({ name, orderId: null, data: snapshot })
-      flash('Plan spremljen ✓')
-      openPlan(id)
-    } catch (e) { flash('Greška pri spremanju plana: ' + e.message) }
-  }
-
-  // ---- ekran: PLAN ZA SKLADIŠTARA (otvoren preko ?plan= linka ili iz popisa) ----
-  if (activePlanId) return <PlanView planId={activePlanId} onExit={exitPlan} />
-
-  // ---- stanja učitavanja ----
+  // ---- stanja ----
   if (loading) return <div className="fullmsg">Učitavam podatke…</div>
   if (error) return <div className="fullmsg err">Greška pri spajanju na bazu:<br />{error}</div>
-  if (!vehicle) return <div className="fullmsg">Nema definiranog kombija u bazi. Pokreni F2 SQL.</div>
+  if (!vehicle) return <div className="fullmsg">Nema definiranog kombija u bazi. Pokreni SQL iz mape supabase/.</div>
 
-  // ---- ekran: NARUDŽBE ----
-  if (view === 'orders') {
-    return <OrdersList onOpen={openOrder} onBack={() => setView('plan')} />
-  }
-
-  // ---- ekran: PLANOVI ----
-  if (view === 'plans') {
-    return <PlansList onOpen={openPlan} onBack={() => setView('plan')} />
+  // ---- ekran: SKLADIŠTAR (samo gledanje) ----
+  if (view === 'view') {
+    return <UtovarView id={viewId} products={productsById} vehicle={vehicle} onBack={() => setView('home')} />
   }
 
   // ---- ekran: KATALOG ----
@@ -162,7 +111,7 @@ export default function App() {
     return (
       <div className="catalog-page">
         <div className="cathead">
-          <button className="btn ghost" onClick={() => setView('plan')}>← Plan utovara</button>
+          <button className="btn ghost" onClick={() => setView('edit')}>← Natrag</button>
           <h2>Katalog i kombi</h2>
         </div>
         <CatalogEditor products={productList} vehicle={vehicle} onChanged={refetchCatalog} />
@@ -170,33 +119,24 @@ export default function App() {
     )
   }
 
-  // ---- statistika ----
-  const vanVol = vehicle.L * vehicle.W * vehicle.H
-  const usedVol = best ? best.placed.reduce((s, p) => s + p.dx * p.dy * p.dz, 0) : 0
-  const util = (usedVol / vanVol) * 100
-  const weight = best ? best.weight : 0
-  const wPct = Math.min(100, (weight / vehicle.payload) * 100)
-  const over = weight > vehicle.payload
-  const maxY = best ? best.placed.reduce((m, p) => Math.max(m, p.y + p.dy), 0) : 0
+  // ---- ekran: POČETNI POPIS ----
+  if (view === 'home') {
+    return <HomeList onView={goView} onEdit={goEdit} onNew={goNew} />
+  }
 
-  // ---- ekran: PLAN ----
+  // ---- ekran: PLANER (uređivanje) ----
   return (
     <div id="app">
       <div id="panel">
-        <div className="panelhead">
-          <h1>Utovar kombija</h1>
-        </div>
+        <div className="panelhead"><h1>{editId ? 'Uredi utovar' : 'Novi utovar'}</h1></div>
         {notice && <div className="notice">{notice}</div>}
-        <p className="sub">Auto-raspored · slaganje u vis · LIFO (istovar obrnut od utovara)</p>
+        <div className="toolbar">
+          <button className="btn" onClick={saveUtovar}>Spremi utovar</button>
+          <button className="btn ghost sm" onClick={() => setView('home')}>← Popis</button>
+          <button className="btn ghost sm" onClick={() => setView('catalog')}>Katalog i kombi</button>
+        </div>
         <div className="van-info">
           {vehicle.name} {vehicle.L.toFixed(1)} × {vehicle.W.toFixed(1)} × {vehicle.H.toFixed(2)} m · nosivost {vehicle.payload} kg · vrata straga · <b>Kupac 1 = uz kabinu</b>
-        </div>
-        <div className="toolbar">
-          <button className="btn sm" onClick={saveCurrentOrder}>Spremi narudžbu</button>
-          <button className="btn ghost sm" onClick={() => setView('orders')}>Narudžbe</button>
-          <button className="btn sm" onClick={savePlanHandler}>Spremi plan</button>
-          <button className="btn ghost sm" onClick={() => setView('plans')}>Planovi</button>
-          <button className="btn ghost sm" onClick={() => setView('catalog')}>Katalog i kombi</button>
         </div>
 
         <div className="seg">
@@ -239,62 +179,10 @@ export default function App() {
           </tbody>
         </table>
 
-        <div className="stats">
-          <div>Iskorištenost prostora: <b>{util.toFixed(1)}%</b></div>
-          <div className="bar"><div style={{ width: `${util.toFixed(0)}%`, background: '#2a6df4' }} /></div>
-          <div>Težina: <b>{weight.toFixed(0)} / {vehicle.payload} kg</b></div>
-          <div className="bar"><div style={{ width: `${wPct.toFixed(0)}%`, background: over ? '#c0392b' : '#1a8a4a' }} /></div>
-          <div>Utovareno: <b>{n}</b> kom · najviši stup <b>{maxY.toFixed(2)} m</b></div>
-          <div>Pomicanja pri istovaru: <b>{best ? best.up.moves : 0}</b></div>
-          {best && best.unplaced.length
-            ? <div className="warn">Nije stalo: {best.unplaced.length} kom ({best.unplaced.map((u) => u.name).join(', ')}).</div>
-            : <div className="ok">✓ Sve stane.</div>}
-          {over && <div className="warn">Prekoračena nosivost — makni nešto ili drugi kombi.</div>}
-        </div>
-
-        {best && (
-          <div className="order">
-            <h4>Plan istovara (redom rute)</h4>
-            {best.up.steps.map((s, i) => (
-              <div className="ustep" key={i}>
-                <b>{i + 1}. {s.name}</b> · {s.count} kom
-                {s.blockers.length
-                  ? <div className="move">↳ prvo pomakni: {s.blockers.map((b) => `${b.name} (${b.custName})`).join(', ')}</div>
-                  : <div className="okline">↳ slobodan pristup</div>}
-              </div>
-            ))}
-          </div>
-        )}
-
-        <div className="legend">
-          <div className="legtitle">Kupci (utovar: kabina → vrata)</div>
-          {active.map((c, ci) => {
-            const items = best ? best.placed.filter((p) => p.custIdx === ci) : []
-            const w = items.reduce((s, p) => s + p.weight, 0)
-            return (
-              <div className="legrow" key={ci}>
-                <span className="sw" style={{ background: c.color }} /> {ci + 1}. {c.name} · {items.length} kom · {w.toFixed(0)} kg
-              </div>
-            )
-          })}
-        </div>
+        {best && <ResultPanel best={best} vehicle={vehicle} customers={active} />}
       </div>
 
-      <div id="stage">
-        <div id="stepwrap">
-          <span className="steplabel">Korak utovara</span>
-          <button className="stepbtn" disabled={step <= 0} onClick={() => setStep((s) => Math.max(0, s - 1))}>◀</button>
-          <input type="range" min={0} max={n} value={step} onChange={(e) => setStep(+e.target.value)} />
-          <button className="stepbtn" disabled={step >= n} onClick={() => setStep((s) => Math.min(n, s + 1))}>▶</button>
-          <span className="stepcount">{step} / {n}</span>
-        </div>
-        <Canvas camera={{ position: [4.6, 3.6, 5.2], fov: 45 }}>
-          <color attach="background" args={['#cdd5e0']} />
-          <VanScene boxes={visible} van={vehicle} />
-          <OrbitControls target={[0, vehicle.H / 2, 0]} enableDamping minDistance={2.5} maxDistance={18} />
-        </Canvas>
-        <div className="hint">Povuci = rotacija · dva prsta / kotačić = zoom</div>
-      </div>
+      {best && <VanStage boxes={best.placed} van={vehicle} />}
     </div>
   )
 }

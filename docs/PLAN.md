@@ -11,9 +11,14 @@
 - **F2 GOTOVO** ✅ **i potvrđeno na produkciji** (combiai.vercel.app radi). App čita katalog/kombi iz Supabasea, ekran „Katalog i kombi" (CRUD + uredi kombi).
   - Riješen bug: „Headers Invalid value" = novi red u anon ključu na Vercelu → dodan `.trim()` u `supabase.js`. Lekcija: env „radi lokalno, ne na prod" → posumnjaj na razmak/novi red.
 - **Lokalni dev:** `npm run dev -- --port 5190 --strictPort` (port 5190, jer 5173/5174 zauzima drugi projekt na računalu).
-- **F3 GOTOVO** ✅ (radi na prod): spremi/otvori/obriši narudžbu.
-- **F4+F5 U TIJEKU (kod gotov):** „Spremi plan" sprema zamrznuti snapshot izračuna; „Planovi" popis; skladištar otvara **read-only PlanView** (3D + koraci + plan istovara) preko **`?plan=<id>` linka** (planer klikne „Kopiraj link" i pošalje). SQL `supabase/f4_plans.sql` → 👤 pokrenuti.
-- **Ostaje: F6** — dorada za stvarnu upotrebu (auto-sesija/bez logina, rubna stanja, mobilni QA).
+- **POJEDNOSTAVLJENO (na zahtjev korisnika)** ✅ — spojeni „Narudžbe" i „Planovi" u JEDAN pojam **„Utovar"**. Uklonjeni linkovi/`?plan=`.
+  - **Početni ekran = popis utovara** (najnoviji gore) + gumb „Planiraj novi utovar" + „Osvježi".
+  - **Skladištar**: otvori app → popis → klikne „Otvori" → read-only upute (3D + koraci + istovar). Preračunava se iz spremljenog utovara (nema zamrznutog snapshota).
+  - **Planer**: „Planiraj novi utovar" ili „uredi" → editor → „Spremi utovar".
+  - Podatkovni model: koriste se `orders`/`order_customer`/`order_item` (tablica `plan` iz f4 sad se NE koristi — može ostati prazna).
+  - Novi/refaktorirani: HomeList, UtovarView, VanStage, ResultPanel; App presložen; obrisani OrdersList/PlansList/PlanView.
+- **F3/F4/F5 objedinjeni u „Utovar" tok** ✅ (kod gotov, build prolazi).
+- **Ostaje: F6** — dorada (auto-sesija/bez logina, rubna stanja, mobilni QA, možda auto-osvježavanje popisa).
 - **Stack:** Vite + React + react-three-fiber · Supabase · Vercel. Odluke: npm, JavaScript, app u `app/`.
 
 ---

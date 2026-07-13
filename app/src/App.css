@@ -103,3 +103,14 @@ tbody tr { border-bottom: 1px solid #f2f4f8; }
 
 .toolbar { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 12px; }
 .notice { background: #e8f5ee; border: 1px solid #b7e0c6; color: #1a8a4a; padding: 7px 10px; border-radius: 8px; font-size: 12px; margin-bottom: 8px; }
+
+/* --- početni popis utovara --- */
+.home { max-width: 640px; margin: 0 auto; padding: 18px 16px 60px; height: 100%; overflow-y: auto; }
+.homehead { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 10px; }
+.homehead h1 { margin: 0; font-size: 20px; }
+.refreshbtn { margin-bottom: 12px; }
+.homerow { display: flex; align-items: center; gap: 8px; border: 1px solid #e2e7ef; border-radius: 10px; padding: 10px 12px; margin-bottom: 8px; background: #fff; }
+.homerow-main { flex: 1; cursor: pointer; min-width: 0; }
+.homerow-name { font-weight: 600; font-size: 15px; }
+.homerow-date { font-size: 11px; color: #9aa2b1; }
+.homerow-actions { display: flex; align-items: center; gap: 8px; flex: none; }
