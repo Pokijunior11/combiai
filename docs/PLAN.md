@@ -11,7 +11,9 @@
 - **F2 GOTOVO** ✅ **i potvrđeno na produkciji** (combiai.vercel.app radi). App čita katalog/kombi iz Supabasea, ekran „Katalog i kombi" (CRUD + uredi kombi).
   - Riješen bug: „Headers Invalid value" = novi red u anon ključu na Vercelu → dodan `.trim()` u `supabase.js`. Lekcija: env „radi lokalno, ne na prod" → posumnjaj na razmak/novi red.
 - **Lokalni dev:** `npm run dev -- --port 5190 --strictPort` (port 5190, jer 5173/5174 zauzima drugi projekt na računalu).
-- **Sljedeći korak: F3** — narudžbe u bazi (tablice `order` + `order_item`; editor sprema/učitava narudžbu).
+- **F3 U TIJEKU:** kod gotov (spremi/otvori/obriši narudžbu; dugmad „Spremi narudžbu" + „Narudžbe"). SQL pripremljen `supabase/f3_orders.sql` → 👤 pokrenuti u Supabaseu, pa testirati spremanje/otvaranje.
+  - Model: `orders` + `order_customer` (position = redoslijed utovara) + `order_item` (qty).
+- **Sljedeći korak nakon F3: F4** — generiranje i spremanje izračunatog plana.
 - **Stack:** Vite + React + react-three-fiber · Supabase · Vercel. Odluke: npm, JavaScript, app u `app/`.
 
 ---

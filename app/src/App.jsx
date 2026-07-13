@@ -3,9 +3,10 @@ import { Canvas } from '@react-three/fiber'
 import { OrbitControls } from '@react-three/drei'
 import { DEFAULT_CUSTOMERS, EXAMPLES } from './data/catalog'
 import { computeBest } from './lib/packer'
-import { fetchArticles, fetchVehicle } from './lib/db'
+import { fetchArticles, fetchVehicle, saveOrder, loadOrder } from './lib/db'
 import VanScene from './components/VanScene'
 import CatalogEditor from './components/CatalogEditor'
+import OrdersList from './components/OrdersList'
 import './App.css'
 
 const cloneCust = (c) => c.map((x) => ({ ...x, qty: { ...x.qty } }))
@@ -25,9 +26,11 @@ export default function App() {
   const [customers, setCustomers] = useState([])
   const [numCust, setNumCust] = useState(3)
   const [step, setStep] = useState(0)
-  const [view, setView] = useState('plan') // 'plan' | 'catalog'
+  const [view, setView] = useState('plan') // 'plan' | 'catalog' | 'orders'
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const [notice, setNotice] = useState('')
+  const flash = (m) => { setNotice(m); setTimeout(() => setNotice(''), 2500) }
 
   const productsById = useMemo(
     () => Object.fromEntries(productList.map((p) => [p.id, p])),
@@ -89,10 +92,35 @@ export default function App() {
     setCustomers((prev) => prev.map((c, i) => ({ ...c, qty: EXAMPLES[x][i] ? mapQty(EXAMPLES[x][i], codeToId) : {} })))
   }
 
+  const saveCurrentOrder = async () => {
+    const suggested = `Utovar ${new Date().toLocaleDateString('hr-HR')}`
+    const name = window.prompt('Naziv narudžbe:', suggested)
+    if (!name) return
+    try {
+      await saveOrder({ name, vehicleId: vehicle.id, customers: active })
+      flash('Narudžba spremljena ✓')
+    } catch (e) { flash('Greška pri spremanju: ' + e.message) }
+  }
+  const openOrder = async (id) => {
+    try {
+      const ord = await loadOrder(id)
+      const padded = [0, 1, 2].map((i) => ord.customers[i] || { name: DEFAULT_CUSTOMERS[i].name, color: DEFAULT_CUSTOMERS[i].color, qty: {} })
+      setCustomers(padded)
+      setNumCust(Math.min(3, Math.max(2, ord.customers.length)))
+      setView('plan')
+      flash(`Otvorena narudžba: ${ord.name}`)
+    } catch (e) { flash('Greška pri otvaranju: ' + e.message) }
+  }
+
   // ---- stanja učitavanja ----
   if (loading) return <div className="fullmsg">Učitavam podatke…</div>
   if (error) return <div className="fullmsg err">Greška pri spajanju na bazu:<br />{error}</div>
   if (!vehicle) return <div className="fullmsg">Nema definiranog kombija u bazi. Pokreni F2 SQL.</div>
+
+  // ---- ekran: NARUDŽBE ----
+  if (view === 'orders') {
+    return <OrdersList onOpen={openOrder} onBack={() => setView('plan')} />
+  }
 
   // ---- ekran: KATALOG ----
   if (view === 'catalog') {
@@ -122,11 +150,16 @@ export default function App() {
       <div id="panel">
         <div className="panelhead">
           <h1>Utovar kombija</h1>
-          <button className="btn ghost sm" onClick={() => setView('catalog')}>Katalog i kombi</button>
         </div>
+        {notice && <div className="notice">{notice}</div>}
         <p className="sub">Auto-raspored · slaganje u vis · LIFO (istovar obrnut od utovara)</p>
         <div className="van-info">
           {vehicle.name} {vehicle.L.toFixed(1)} × {vehicle.W.toFixed(1)} × {vehicle.H.toFixed(2)} m · nosivost {vehicle.payload} kg · vrata straga · <b>Kupac 1 = uz kabinu</b>
+        </div>
+        <div className="toolbar">
+          <button className="btn sm" onClick={saveCurrentOrder}>Spremi narudžbu</button>
+          <button className="btn ghost sm" onClick={() => setView('orders')}>Narudžbe</button>
+          <button className="btn ghost sm" onClick={() => setView('catalog')}>Katalog i kombi</button>
         </div>
 
         <div className="seg">

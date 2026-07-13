@@ -100,3 +100,6 @@ tbody tr { border-bottom: 1px solid #f2f4f8; }
 .ctable .actions { white-space: nowrap; }
 .link { background: none; border: none; color: #2a6df4; cursor: pointer; font-size: 12px; padding: 2px 4px; }
 .link.del { color: #b23c17; }
+
+.toolbar { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 12px; }
+.notice { background: #e8f5ee; border: 1px solid #b7e0c6; color: #1a8a4a; padding: 7px 10px; border-radius: 8px; font-size: 12px; margin-bottom: 8px; }

@@ -75,3 +75,62 @@ export async function updateVehicle(id, form) {
   }).eq('id', id)
   if (error) throw error
 }
+
+// ---------- NARUDŽBE ----------
+export async function listOrders() {
+  const { data, error } = await supabase
+    .from('orders').select('id,name,updated_at').order('updated_at', { ascending: false })
+  if (error) throw error
+  return data
+}
+
+// customers: [{ name, color, qty: { [articleId]: n } }]
+export async function saveOrder({ name, vehicleId, customers }) {
+  const { data: ord, error: e1 } = await supabase
+    .from('orders').insert({ name: name.trim(), vehicle_id: vehicleId }).select().single()
+  if (e1) throw e1
+
+  const custRows = customers.map((c, i) => ({ order_id: ord.id, name: c.name, color: c.color, position: i }))
+  const { data: custs, error: e2 } = await supabase.from('order_customer').insert(custRows).select()
+  if (e2) throw e2
+
+  const items = []
+  customers.forEach((c, i) => {
+    const cust = custs.find((x) => x.position === i)
+    for (const [articleId, qty] of Object.entries(c.qty || {})) {
+      if (qty > 0) items.push({ order_customer_id: cust.id, article_id: articleId, qty })
+    }
+  })
+  if (items.length) {
+    const { error: e3 } = await supabase.from('order_item').insert(items)
+    if (e3) throw e3
+  }
+  return ord.id
+}
+
+export async function loadOrder(id) {
+  const { data: ord, error: e1 } = await supabase.from('orders').select('*').eq('id', id).single()
+  if (e1) throw e1
+  const { data: custs, error: e2 } = await supabase
+    .from('order_customer').select('*').eq('order_id', id).order('position')
+  if (e2) throw e2
+
+  const custIds = custs.map((c) => c.id)
+  let items = []
+  if (custIds.length) {
+    const { data, error: e3 } = await supabase.from('order_item').select('*').in('order_customer_id', custIds)
+    if (e3) throw e3
+    items = data
+  }
+  const customers = custs.map((c) => ({
+    name: c.name,
+    color: c.color,
+    qty: Object.fromEntries(items.filter((it) => it.order_customer_id === c.id).map((it) => [it.article_id, it.qty])),
+  }))
+  return { id: ord.id, name: ord.name, vehicleId: ord.vehicle_id, customers }
+}
+
+export async function deleteOrder(id) {
+  const { error } = await supabase.from('orders').delete().eq('id', id)
+  if (error) throw error
+}
