@@ -74,6 +74,10 @@ run('CASE-7  K1{H4,M1} K2{H2} K3{H5} — bez praznih slotova na granici', [{hlad
 // ---- filer ide UNATRAG na raniji kupac (na tavan K1), ne naprijed na K3 (screenshot 14:25) ----
 run('CASE-8  K1{H1,S2} K2{H2,M8} K3{H4} — K2 mikrovalne na K1 tavan, 0 pomicanja', [{hladnjak:1,susilica:2},{hladnjak:2,mikro:8},{hladnjak:4}])
 
+// ---- MAX-LOAD: dodavanje artikla NE smije "otključati" ostale (lažni ne-stane, screenshot 09:49) ----
+run('CASE-11 K1{H2,M4,PP1,PR2,TV1} K2{H2,MF10,M4,TV3} K3{H3} — sve mora stati (bez lažnog ne-stane)',
+  [{hladnjak:2,mikro:4,posudje:1,perilica:2,televizor:1},{hladnjak:2,mfrizider:10,mikro:4,televizor:3},{hladnjak:3}])
+
 // ---- filer se gnijezdi U RUPU (contained), ne penje izloženo na vrh frižidera (screenshot 16:52) ----
 run('CASE-10 K1{H2,perilica1,M4} — mikrovalne u nišu iznad veš mašine, ne na vrh frižidera',
   [{hladnjak:2,perilica:1,mikro:4}])

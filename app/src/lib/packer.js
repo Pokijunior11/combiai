@@ -122,16 +122,25 @@ function lessKey(a, b) { for (let i=0;i<a.length;i++){ if(a[i]<b[i]-1e-9) return
 const isFiller = it => it.h <= 0.5
 const area = it => it.l * it.w
 
-// Ključ pozicije strukture: gradi krišku u VIS na trenutnoj granici prije pomicanja dublje.
-//   x (ostani plitko, čuvaj dužinu poda) → y (u toj kriški: pod prvo, pa na vrh) → z (po širini).
-// Time se stogovi grade (npr. sušilice/mali frižideri jedan na drugi) umjesto da se pod razvuče.
-function placeKey(c) {
-  return [c.x, c.y, c.z]
-}
+const vol = it => it.l * it.w * it.h
+
+// Strategije za MAX-LOAD pretragu: probaju se različiti redoslijedi i ključevi slaganja strukture,
+// pa se uzme najbolji VALJANI (LIFO) raspored. Model (tvrda pravila + LIFO) je fiksan; pretraga samo
+// maksimizira punjenje — kao "check max load" alati. Time nema lažnog „ne stane" jer jedan red zapne.
+const STRUCT_CMPS = [
+  (a, b) => area(b) - area(a) || b.weight - a.weight || b.h - a.h, // najveća površina prvo
+  (a, b) => b.h - a.h || area(b) - area(a) || b.weight - a.weight, // najviše prvo (gradi stupce)
+  (a, b) => vol(b) - vol(a) || b.weight - a.weight,                // najveći volumen prvo
+  (a, b) => b.weight - a.weight || area(b) - area(a),              // najteže prvo
+]
+const STRUCT_KEYS = [
+  c => [c.x, c.y, c.z], // plitko → u vis → po širini (gradi stupce, čuva dužinu poda)
+  c => [c.x, c.z, c.y], // plitko → po širini → u vis (puni presjek po podu pa se penje)
+]
 
 // Složi SVE stavke jednog kupca u pojas [frontier, van.L]: na pod ili na već složeno,
 // ali nikad dublje od granice (strogi LIFO po dubini). Vrati nove komade + novu granicu.
-function packCustomer(items, placed, totW0, frontier, van) {
+function packCustomer(items, placed, totW0, frontier, van, structKey) {
   const mine = [], unplaced = []
   let totW = totW0
   let points = [{ x: frontier, y: 0, z: 0 }]
@@ -147,7 +156,7 @@ function packCustomer(items, placed, totW0, frontier, van) {
         if (collides(c, placed) || collides(c, mine)) continue
         if (!supported(c, [...placed, ...mine])) continue
         if (structureBlocked(c, it.custIdx, [...placed, ...mine])) continue // tvrdi LIFO
-        const k = placeKey(c)
+        const k = structKey(c)
         if (!best || lessKey(k, best.k)) best = { c, k }
       }
     }
@@ -197,8 +206,8 @@ export function unloadPlan(placed) {
   return { moves, steps }
 }
 
-// Stavke jednog kupca, razdvojene. Struktura: najveće/najteže prvo (zauzmu pod).
-function customerParts(cust, ci, products) {
+// Stavke jednog kupca, razdvojene. Struktura se sortira zadanim redoslijedom (strategija).
+function customerParts(cust, ci, products, structCmp) {
   const struct = [], fill = []
   for (const k of Object.keys(products)) {
     const n = (cust.qty && cust.qty[k]) || 0
@@ -208,7 +217,7 @@ function customerParts(cust, ci, products) {
       ;(isFiller(it) ? fill : struct).push(it)
     }
   }
-  struct.sort((a, b) => area(b) - area(a) || b.weight - a.weight || b.h - a.h)
+  struct.sort(structCmp)
   return { struct, fill }
 }
 
@@ -262,22 +271,22 @@ function packFillers(fillers, placed, totW0, bandStart, bandEnd, van) {
   return { mine, unplaced, totW }
 }
 
-// Glavni ulaz: Faza 1 = struktura po kriškama (kabina→vrata); Faza 2 = fileri u tavan.
-export function computeBest(custs, van, products) {
+// Jedan prolaz za zadanu strategiju: Faza 1 = struktura po kriškama (kabina→vrata); Faza 2 = fileri.
+function packOnce(custs, van, products, structCmp, structKey) {
   const placed = [], unplaced = []
   let totW = 0
   const allFillers = []
   // Struktura svih kupaca u JEDNU sekvencu, po redoslijedu kupaca (LIFO): K1, pa K2, pa K3…
   const structSeq = []
   custs.forEach((cust, ci) => {
-    const { struct, fill } = customerParts(cust, ci, products)
+    const { struct, fill } = customerParts(cust, ci, products, structCmp)
     structSeq.push(...struct)
     allFillers.push(...fill)
   })
   // Faza 1: kontinuirano pakiranje strukture — BEZ resetiranja reda po kupcu. Kad kupac završi,
   // sljedeći NASTAVLJA puniti započeti red (nema rezerviranih praznih slotova). LIFO drži redoslijed:
   // raniji kupci su prvi zauzeli pliće slotove, kasniji popune rupu do njih (bok uz bok, ne iza).
-  const rs = packCustomer(structSeq, placed, totW, 0, van)
+  const rs = packCustomer(structSeq, placed, totW, 0, van, structKey)
   rs.mine.forEach(p => placed.push(p))
   unplaced.push(...rs.unplaced)
   totW = rs.totW
@@ -298,6 +307,28 @@ export function computeBest(custs, van, products) {
   placed.sort((a, b) => a.custIdx - b.custIdx || a.x - b.x || a.y - b.y || a.z - b.z)
   placed.forEach((p, i) => { p.order = i })
   const up = unloadPlan(placed)
-  const score = { n: placed.length, moves: up.moves, w: totW }
+  const usedVol = placed.reduce((s, p) => s + p.dx * p.dy * p.dz, 0)
+  const score = { n: placed.length, vol: usedVol, moves: up.moves, w: totW }
   return { placed, unplaced, weight: totW, up, score }
+}
+
+// Bolji raspored: najviše utovareno → najveći volumen (gušće) → najmanje pomicanja → najveća masa.
+function betterResult(a, b) {
+  if (a.score.n !== b.score.n) return a.score.n > b.score.n
+  if (Math.abs(a.score.vol - b.score.vol) > 1e-6) return a.score.vol > b.score.vol
+  if (a.score.moves !== b.score.moves) return a.score.moves < b.score.moves
+  return a.score.w > b.score.w
+}
+
+// Glavni ulaz: MAX-LOAD pretraga — probaj sve strategije (redoslijed × ključ), vrati najbolji
+// valjani LIFO raspored. Dodavanje strategija nikad ne pogorša rezultat (monoton max).
+export function computeBest(custs, van, products) {
+  let best = null
+  for (const structCmp of STRUCT_CMPS) {
+    for (const structKey of STRUCT_KEYS) {
+      const r = packOnce(custs, van, products, structCmp, structKey)
+      if (!best || betterResult(r, best)) best = r
+    }
+  }
+  return best
 }

@@ -5,13 +5,14 @@
 export const VAN = { L: 4.0, W: 2.0, H: 2.30, payload: 1400 }
 
 export const PRODUCTS = {
-  hladnjak:  { name: 'Hladnjak',          l: 0.60, w: 0.65, h: 1.85, weight: 75, canLie: false },
-  mfrizider: { name: 'Mali frižider',     l: 0.55, w: 0.55, h: 1.40, weight: 38, canLie: true },
+  hladnjak:  { name: 'Hladnjak',          l: 0.60, w: 0.65, h: 1.85, weight: 60, canLie: false },
+  mfrizider: { name: 'Mali frižider',     l: 0.57, w: 0.62, h: 1.50, weight: 38, canLie: true },
   zamrzivac: { name: 'Zamrzivač škrinja', l: 0.80, w: 0.65, h: 0.85, weight: 45, canLie: false },
   perilica:  { name: 'Perilica rublja',   l: 0.60, w: 0.60, h: 0.85, weight: 70, canLie: false },
   susilica:  { name: 'Sušilica',          l: 0.60, w: 0.60, h: 0.85, weight: 35, canLie: false },
   posudje:   { name: 'Perilica posuđa',   l: 0.60, w: 0.60, h: 0.82, weight: 40, canLie: false },
   stednjak:  { name: 'Štednjak',          l: 0.60, w: 0.60, h: 0.90, weight: 50, canLie: false },
+  televizor: { name: 'Televizor',         l: 1.20, w: 0.12, h: 0.85, weight: 35, canLie: false },
   mikro:     { name: 'Mikrovalna',        l: 0.50, w: 0.40, h: 0.30, weight: 15, canLie: true },
 }
 
