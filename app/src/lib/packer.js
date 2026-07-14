@@ -56,6 +56,55 @@ function supported(c, placed) {
   if (!rects.length) return false
   return unionArea(rects) >= c.dx*c.dz - 1e-3 // pun oslonac
 }
+// Koliko bi KASNIJIH kupaca (index > ci, istovaruju se prije) kutija c blokirala — front (ispred
+// prema vratima) ili above (iznad). Točno onako kako unloadPlan broji pomicanja. 0 = čist istovar.
+function laterBlocked(c, ci, items) {
+  const set = new Set()
+  for (const B of items) {
+    if (B.custIdx <= ci || set.has(B.custIdx)) continue
+    const yOv = c.y < B.y + B.dy - EPS && B.y < c.y + c.dy - EPS
+    const zOv = c.z < B.z + B.dz - EPS && B.z < c.z + c.dz - EPS
+    const xOv = c.x < B.x + B.dx - EPS && B.x < c.x + c.dx - EPS
+    const front = yOv && zOv && (c.x + c.dx > B.x + B.dx + EPS)
+    const above = xOv && zOv && (c.y + c.dy > B.y + B.dy + EPS)
+    if (front || above) set.add(B.custIdx)
+  }
+  return set.size
+}
+// TVRDI LIFO za strukturu (teško, ne može se odložiti): komad kupca ci NE SMIJE
+//  (a) biti ZAROBLJEN iza RANIJEG kupca (index < ci; taj je pri istovaru ci još u kombiju i stoji
+//      ISPRED prema vratima → ne dođe se do c), ni
+//  (b) blokirati KASNIJEG kupca (index > ci; taj izlazi prije).
+// Slaganje kasnijeg NA ranijeg (npr. K2 na K1, bok uz bok) je OK — skine se s vrha kad taj izlazi.
+function structureBlocked(c, ci, items) {
+  for (const B of items) {
+    const zOv = c.z < B.z + B.dz - EPS && B.z < c.z + c.dz - EPS
+    const yOv = c.y < B.y + B.dy - EPS && B.y < c.y + c.dy - EPS
+    const xOv = c.x < B.x + B.dx - EPS && B.x < c.x + c.dx - EPS
+    if (B.custIdx < ci) {
+      // raniji kupac ISPRED (prema vratima) u istom y-z kanalu → c je zarobljen
+      if (yOv && zOv && B.x + B.dx > c.x + c.dx + EPS) return true
+    } else if (B.custIdx > ci) {
+      const front = yOv && zOv && (c.x + c.dx > B.x + B.dx + EPS)
+      const above = xOv && zOv && (c.y + c.dy > B.y + B.dy + EPS)
+      if (front || above) return true // c blokira kasnijeg kupca
+    }
+  }
+  return false
+}
+// Koliko je kutija c „ugniježđena" — broj bočnih strana (±x, ±z) prislonjenih uz drugu kutiju ili
+// stijenku kombija. Više = stabilnije (u rupi/niši); 0 = izložena (npr. sama na vrhu frižidera → može
+// skliznuti u vožnji). Koristi se da fileri (mikrovalne) sjednu u rupe, a ne da se penju izloženi.
+function containment(c, items, van) {
+  const yzHit = B => c.y < B.y + B.dy - EPS && B.y < c.y + c.dy - EPS && c.z < B.z + B.dz - EPS && B.z < c.z + c.dz - EPS
+  const xyHit = B => c.x < B.x + B.dx - EPS && B.x < c.x + c.dx - EPS && c.y < B.y + B.dy - EPS && B.y < c.y + c.dy - EPS
+  let n = 0
+  if (c.x <= EPS || items.some(B => Math.abs(B.x + B.dx - c.x) < 1e-3 && yzHit(B))) n++
+  if (c.x + c.dx >= van.L - EPS || items.some(B => Math.abs(B.x - (c.x + c.dx)) < 1e-3 && yzHit(B))) n++
+  if (c.z <= EPS || items.some(B => Math.abs(B.z + B.dz - c.z) < 1e-3 && xyHit(B))) n++
+  if (c.z + c.dz >= van.W - EPS || items.some(B => Math.abs(B.z - (c.z + c.dz)) < 1e-3 && xyHit(B))) n++
+  return n
+}
 function insideAny(pt, placed) {
   return placed.some(p => pt.x>p.x+EPS && pt.x<p.x+p.dx-EPS &&
                           pt.y>p.y+EPS && pt.y<p.y+p.dy-EPS &&
@@ -67,33 +116,52 @@ function dedupePts(pts) {
 }
 function lessKey(a, b) { for (let i=0;i<a.length;i++){ if(a[i]<b[i]-1e-9) return true; if(a[i]>b[i]+1e-9) return false } return false }
 
-function tryPack(items, placeKey, van) {
-  const placed = [], unplaced = []
-  let totW = 0
-  let points = [{ x:0, y:0, z:0 }]
+// --- Klasifikacija (samo za redoslijed slaganja, NIJE tvrdo pravilo) ---
+// Filer = nisko/lagano (mikrovalna) → puni tavan iznad struktura. Struktura → zauzima pod.
+// Prag po visini: sve strukturne bijele stvari su ≥ 0.82 m, mikrovalna 0.30 m.
+const isFiller = it => it.h <= 0.5
+const area = it => it.l * it.w
+
+// Ključ pozicije strukture: gradi krišku u VIS na trenutnoj granici prije pomicanja dublje.
+//   x (ostani plitko, čuvaj dužinu poda) → y (u toj kriški: pod prvo, pa na vrh) → z (po širini).
+// Time se stogovi grade (npr. sušilice/mali frižideri jedan na drugi) umjesto da se pod razvuče.
+function placeKey(c) {
+  return [c.x, c.y, c.z]
+}
+
+// Složi SVE stavke jednog kupca u pojas [frontier, van.L]: na pod ili na već složeno,
+// ali nikad dublje od granice (strogi LIFO po dubini). Vrati nove komade + novu granicu.
+function packCustomer(items, placed, totW0, frontier, van) {
+  const mine = [], unplaced = []
+  let totW = totW0
+  let points = [{ x: frontier, y: 0, z: 0 }]
   for (const it of items) {
     let best = null
     for (const P of points) {
+      if (P.x < frontier - EPS) continue // nikad iza granice (LIFO po dubini)
       for (const o of orientations(it)) {
-        const c = { x:P.x, y:P.y, z:P.z, dx:o.dx, dy:o.dy, dz:o.dz, weight:it.weight }
+        const c = { x: P.x, y: P.y, z: P.z, dx: o.dx, dy: o.dy, dz: o.dz, weight: it.weight }
+        if (c.x < frontier - EPS) continue
         if (!fitsBounds(c, van)) continue
         if (totW + it.weight > van.payload + EPS) continue
-        if (collides(c, placed)) continue
-        if (!supported(c, placed)) continue
+        if (collides(c, placed) || collides(c, mine)) continue
+        if (!supported(c, [...placed, ...mine])) continue
+        if (structureBlocked(c, it.custIdx, [...placed, ...mine])) continue // tvrdi LIFO
         const k = placeKey(c)
         if (!best || lessKey(k, best.k)) best = { c, k }
       }
     }
     if (!best) { unplaced.push(it); continue }
     const c = best.c
-    placed.push({ ...it, x:c.x, y:c.y, z:c.z, dx:c.dx, dy:c.dy, dz:c.dz, order:placed.length })
+    mine.push({ ...it, x: c.x, y: c.y, z: c.z, dx: c.dx, dy: c.dy, dz: c.dz })
     totW += it.weight
-    points.push({ x:c.x+c.dx, y:c.y, z:c.z })
-    points.push({ x:c.x, y:c.y, z:c.z+c.dz })
-    points.push({ x:c.x, y:c.y+c.dy, z:c.z })
-    points = dedupePts(points.filter(pt => !insideAny(pt, placed)))
+    points.push({ x: c.x + c.dx, y: c.y, z: c.z })
+    points.push({ x: c.x, y: c.y, z: c.z + c.dz })
+    points.push({ x: c.x, y: c.y + c.dy, z: c.z })
+    points = dedupePts(points.filter(pt => !insideAny(pt, [...placed, ...mine])))
   }
-  return { placed, unplaced, weight: totW }
+  const maxX = mine.reduce((m, p) => Math.max(m, p.x + p.dx), frontier)
+  return { mine, unplaced, totW, maxX }
 }
 
 // Plan istovara: obrnuto od utovara (najveći custIdx prvi). Broji "pomakni X".
@@ -129,47 +197,107 @@ export function unloadPlan(placed) {
   return { moves, steps }
 }
 
-const area = it => it.l * it.w
-const keyYXZ = c => [c.y, c.x, c.z]
-const keyXYZ = c => [c.x, c.y, c.z]
-const keyYZX = c => [c.y, c.z, c.x]
-const STRATS = [
-  { cmp: (a,b) => area(b)-area(a) || b.weight-a.weight || b.h-a.h, place: keyYXZ },
-  { cmp: (a,b) => b.h-a.h || area(b)-area(a) || b.weight-a.weight, place: keyXYZ },
-  { cmp: (a,b) => b.weight-a.weight || area(b)-area(a) || b.h-a.h, place: keyYZX },
-]
+// Stavke jednog kupca, razdvojene. Struktura: najveće/najteže prvo (zauzmu pod).
+function customerParts(cust, ci, products) {
+  const struct = [], fill = []
+  for (const k of Object.keys(products)) {
+    const n = (cust.qty && cust.qty[k]) || 0
+    for (let i = 0; i < n; i++) {
+      const p = products[k]
+      const it = { ...p, key: k, custName: cust.name, custIdx: ci, color: cust.color }
+      ;(isFiller(it) ? fill : struct).push(it)
+    }
+  }
+  struct.sort((a, b) => area(b) - area(a) || b.weight - a.weight || b.h - a.h)
+  return { struct, fill }
+}
 
-function makeItems(custs, cmp, products) {
-  const arr = []
-  custs.forEach((c, ci) => {
-    const list = []
-    for (const k of Object.keys(products)) {
-      const n = (c.qty && c.qty[k]) || 0
-      for (let i=0;i<n;i++) {
-        const p = products[k]
-        list.push({ ...p, key:k, custName:c.name, custIdx:ci, color:c.color })
+// Faza 2: fileri (mikrovalne) u tavan. Radije u zoni SVOG kupca, pa na NAJBLIŽEG susjeda
+// (svejedno kabina/vrata strana), s tim da ne odlutaju dublje od jedne kriške unatrag
+// (LIFO — inače završe predaleko od svog kupca, kao na screenshotu). Struktura se ne dira.
+function packFillers(fillers, placed, totW0, bandStart, bandEnd, van) {
+  const mine = [], unplaced = []
+  let totW = totW0
+  let points = [{ x: 0, y: 0, z: 0 }]
+  for (const p of placed) {
+    points.push({ x: p.x + p.dx, y: p.y, z: p.z })
+    points.push({ x: p.x, y: p.y, z: p.z + p.dz })
+    points.push({ x: p.x, y: p.y + p.dy, z: p.z })
+  }
+  points = dedupePts(points.filter(pt => !insideAny(pt, placed)))
+  for (const it of fillers) {
+    const s = bandStart[it.custIdx] || 0
+    const e = bandEnd[it.custIdx] || van.L
+    const minX = bandStart[Math.max(0, it.custIdx - 1)] || 0 // najviše jedna kriška unatrag
+    let best = null
+    for (const P of points) {
+      if (P.x < minX - EPS) continue
+      for (const o of orientations(it)) {
+        const c = { x: P.x, y: P.y, z: P.z, dx: o.dx, dy: o.dy, dz: o.dz, weight: it.weight }
+        if (c.x < minX - EPS) continue
+        if (!fitsBounds(c, van)) continue
+        if (totW + it.weight > van.payload + EPS) continue
+        if (collides(c, placed) || collides(c, mine)) continue
+        if (!supported(c, [...placed, ...mine])) continue
+        // Prioritet: (1) minimum pomicanja (ne blokiraj kasnije kupce); (2) bliže svojoj kriški;
+        // (3) UGNIJEŽĐENO — u rupu/nišu (više prislonjenih strana), a ne izloženo na vrh frižidera
+        // gdje bi moglo skliznuti; (4) niže; (5) bliže kabini. „Koliko ostane" na svog/ranijeg kupca.
+        const blocked = laterBlocked(c, it.custIdx, [...placed, ...mine])
+        const cxc = c.x + c.dx / 2
+        const dband = cxc < s ? s - cxc : (cxc > e ? cxc - e : 0)
+        const nest = containment(c, [...placed, ...mine], van)
+        const k = [blocked, dband, -nest, c.y, c.x]
+        if (!best || lessKey(k, best.k)) best = { c, k }
       }
     }
-    list.sort(cmp)
-    arr.push(...list)
-  })
-  return arr
-}
-function better(a, b) {
-  if (a.n !== b.n) return a.n > b.n
-  if (a.moves !== b.moves) return a.moves < b.moves
-  return a.w > b.w
+    if (!best) { unplaced.push(it); continue }
+    const c = best.c
+    mine.push({ ...it, x: c.x, y: c.y, z: c.z, dx: c.dx, dy: c.dy, dz: c.dz })
+    totW += it.weight
+    points.push({ x: c.x + c.dx, y: c.y, z: c.z })
+    points.push({ x: c.x, y: c.y, z: c.z + c.dz })
+    points.push({ x: c.x, y: c.y + c.dy, z: c.z })
+    points = dedupePts(points.filter(pt => !insideAny(pt, [...placed, ...mine])))
+  }
+  return { mine, unplaced, totW }
 }
 
-// Glavni ulaz: probaj sve strategije, vrati najbolji raspored + plan istovara.
+// Glavni ulaz: Faza 1 = struktura po kriškama (kabina→vrata); Faza 2 = fileri u tavan.
 export function computeBest(custs, van, products) {
-  let best = null
-  for (const st of STRATS) {
-    const r = tryPack(makeItems(custs, st.cmp, products), st.place, van)
-    const up = unloadPlan(r.placed)
-    const score = { n: r.placed.length, moves: up.moves, w: r.weight }
-    const cand = { ...r, up, score }
-    if (!best || better(score, best.score)) best = cand
-  }
-  return best
+  const placed = [], unplaced = []
+  let totW = 0
+  const allFillers = []
+  // Struktura svih kupaca u JEDNU sekvencu, po redoslijedu kupaca (LIFO): K1, pa K2, pa K3…
+  const structSeq = []
+  custs.forEach((cust, ci) => {
+    const { struct, fill } = customerParts(cust, ci, products)
+    structSeq.push(...struct)
+    allFillers.push(...fill)
+  })
+  // Faza 1: kontinuirano pakiranje strukture — BEZ resetiranja reda po kupcu. Kad kupac završi,
+  // sljedeći NASTAVLJA puniti započeti red (nema rezerviranih praznih slotova). LIFO drži redoslijed:
+  // raniji kupci su prvi zauzeli pliće slotove, kasniji popune rupu do njih (bok uz bok, ne iza).
+  const rs = packCustomer(structSeq, placed, totW, 0, van)
+  rs.mine.forEach(p => placed.push(p))
+  unplaced.push(...rs.unplaced)
+  totW = rs.totW
+  // Zona (band) svakog kupca iz STVARNOG rasporeda → za klasteriranje filera u Fazi 2.
+  const bandStart = [], bandEnd = []
+  custs.forEach((_, ci) => {
+    const mine = placed.filter(p => p.custIdx === ci)
+    bandStart[ci] = mine.length ? Math.min(...mine.map(p => p.x)) : 0
+    bandEnd[ci] = mine.length ? Math.max(...mine.map(p => p.x + p.dx)) : bandStart[ci]
+  })
+  // Faza 2: fileri u tavan (grupirani po kupcu → klasteriraju u svojoj zoni).
+  allFillers.sort((a, b) => a.custIdx - b.custIdx || area(b) - area(a))
+  const rf = packFillers(allFillers, placed, totW, bandStart, bandEnd, van)
+  rf.mine.forEach(p => placed.push(p))
+  unplaced.push(...rf.unplaced)
+  totW = rf.totW
+  // Redoslijed utovara/uputa: kabina→vrata, odozdo→gore.
+  placed.sort((a, b) => a.custIdx - b.custIdx || a.x - b.x || a.y - b.y || a.z - b.z)
+  placed.forEach((p, i) => { p.order = i })
+  const up = unloadPlan(placed)
+  const score = { n: placed.length, moves: up.moves, w: totW }
+  return { placed, unplaced, weight: totW, up, score }
 }

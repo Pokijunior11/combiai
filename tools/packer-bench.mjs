@@ -69,6 +69,23 @@ run('CASE-1b  isto ali M17 (BUG: 2 hladnjaka ispadnu)', [{hladnjak:1,mikro:17,su
 run('CASE-3   K1{H1,M16,S2} K2{H4,M12} K3{H7}', [{hladnjak:1,mikro:16,susilica:2},{hladnjak:4,mikro:12},{hladnjak:7}])
 run('CASE-4   K1{H1,M11,S2} K2{H6} K3{H7,M6}', [{hladnjak:1,mikro:11,susilica:2},{hladnjak:6},{hladnjak:7,mikro:6}])
 
+// ---- red se NE smije prekinuti na granici kupca (screenshot 14:16) ----
+run('CASE-7  K1{H4,M1} K2{H2} K3{H5} — bez praznih slotova na granici', [{hladnjak:4,mikro:1},{hladnjak:2},{hladnjak:5}])
+// ---- filer ide UNATRAG na raniji kupac (na tavan K1), ne naprijed na K3 (screenshot 14:25) ----
+run('CASE-8  K1{H1,S2} K2{H2,M8} K3{H4} — K2 mikrovalne na K1 tavan, 0 pomicanja', [{hladnjak:1,susilica:2},{hladnjak:2,mikro:8},{hladnjak:4}])
+
+// ---- filer se gnijezdi U RUPU (contained), ne penje izloženo na vrh frižidera (screenshot 16:52) ----
+run('CASE-10 K1{H2,perilica1,M4} — mikrovalne u nišu iznad veš mašine, ne na vrh frižidera',
+  [{hladnjak:2,perilica:1,mikro:4}])
+
+// ---- struktura kasnijeg kupca NE SMIJE natrag na tavan ranijeg (screenshot 15:05) ----
+run('CASE-9  K1{H2,MF3,posudje1,perilica1,stednjak1} K2{H5} K3{H2,MF1,susilica1,M11} — zelena struktura ne ide natrag',
+  [{hladnjak:2,mfrizider:3,posudje:1,perilica:1,stednjak:1},{hladnjak:5},{hladnjak:2,mfrizider:1,susilica:1,mikro:11}])
+
+// ---- stog test: niske stvari se MORAJU slagati u vis, ne razvući po podu ----
+run('CASE-5  stog: K1{sušilica8, posudje4} — grade se u vis', [{susilica:8,posudje:4}])
+run('CASE-6  mali frižideri: K1{mfrizider12} — liježu/slažu u vis', [{mfrizider:12}])
+
 // ---- referentna provjera: koliko čistih frižidera stane (bez malih) ----
 run('REF  12 frižidera (1 kupac) — moraju stati na pod', [{hladnjak:12}])
 run('REF  18 frižidera — koliko stane na pod', [{hladnjak:18}])
