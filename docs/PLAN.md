@@ -124,6 +124,27 @@ preskače postojeće/dedup po `code`). Dodane kolone `ean`, `category`. Sljedeć
 otpremnice (.xls Synesis) → parse → match po EAN → grupiranje po kupcu → izračun. Packer rubni
 slučajevi = zaseban track (Kolosijek B), nakon eksplicitnih pravila po artiklu.
 
+**Tehnički mapping za Kriška 2 (otkriveno 2026-07-15):**
+- **Heinner Excel** `HEINNER _Q2_ADRIA.xlsx` (u korisnikovom `Downloads`, ne u repou): listovi
+  `SDA, PERSONAL CARE, MDA, HOME COMFORT, AC 2026`. Za utovar: **MDA** (bijela tehnika, uvezeno),
+  kasnije HOME COMFORT + **AC 2026** (klime = parovi, novo pravilo). Header je **red 2** (1-based;
+  red 1 = grupni merge header). Kolone: `Category, Code, Photo, Description, Origin, EAN`, pa
+  **Product dims** (L,W,H,Weight), pa **Package box dims = BRUTTO** (L,W,H,Weight) ← ove koristimo,
+  pa `HS CODE, Stock`. Visina zna biti raspon („60.5 - 88.5") → uzmi veći broj. Import je već u
+  `tools/import_heinner.py`.
+- **Otpremnica** `Otpremnica.xls` (Synesis ERP, stari .xls; xlrd ga čita): flat, 1 red = 1 stavka,
+  zaglavlje dokumenta ponovljeno u svakom redu. Bitne kolone (0-based): `[33] SIFRA_ROBE = EAN`,
+  `[34] NAZIV_ROBE_USLUGE`, `[35] JMJ`, `[41] GRUPA_ROBA_USLUGA`, `[46] KOLICINA`,
+  `[14] NAZIV_KUPCA`, `[0] R_BROJ` (dokument). **Match: otpremnica.SIFRA_ROBE ↔ article.ean.**
+  Drugi brendovi (npr. „SAX" klima, EAN ne počinje 5949…) se NE matchaju dok nemamo njihove dim.
+- **`article` tablica** (Supabase): `id, code, name, ean, category, length_cm, width_cm, height_cm,
+  weight_kg, can_lie, created_at`. Dim u **cm** (packer dijeli sa 100 → m). `can_lie` default false
+  (Heinner ne daje orijentaciju → tuning po §4c). U bazi 373 (364 Heinner + 9 demo).
+- **Narudžbe model** (`db.js`): `orders`→`order_customer`(name,color,position)→`order_item`
+  (article_id, qty). Upload otpremnice puni upravo ovo: grupiraj stavke po `NAZIV_KUPCA` → kupci.
+- **Frontend za Kriška 2:** `npm i xlsx` (SheetJS, čita .xls i .xlsx u pregledniku); UI gumb u
+  `UtovarView.jsx`; match u novi `lib/importOtpremnica.js`; postojeći `packer.js` ostaje.
+
 ---
 
 ## 5. Fazni plan (V1)
