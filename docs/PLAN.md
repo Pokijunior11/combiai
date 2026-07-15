@@ -118,6 +118,12 @@ Poznata dugovanja (iz `issue.txt` i dogovora):
   skladištaru**) atributi+pravila su pravi izbor. Alternativa (čisti optimizacijski solver / ML) je
   nepredvidljiva i teško objašnjiva — ne paše.
 
+**Status 2026-07-15:** Kriška 1 gotova — Heinner **MDA (bijela tehnika)** uvezen u `article`
+(364 artikla, brutto dim + `ean` + `category`), alat `tools/import_heinner.py` (idempotentan,
+preskače postojeće/dedup po `code`). Dodane kolone `ean`, `category`. Sljedeće: Kriška 2 = upload
+otpremnice (.xls Synesis) → parse → match po EAN → grupiranje po kupcu → izračun. Packer rubni
+slučajevi = zaseban track (Kolosijek B), nakon eksplicitnih pravila po artiklu.
+
 ---
 
 ## 5. Fazni plan (V1)
