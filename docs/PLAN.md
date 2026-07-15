@@ -120,9 +120,25 @@ Poznata dugovanja (iz `issue.txt` i dogovora):
 
 **Status 2026-07-15:** Kriška 1 gotova — Heinner **MDA (bijela tehnika)** uvezen u `article`
 (364 artikla, brutto dim + `ean` + `category`), alat `tools/import_heinner.py` (idempotentan,
-preskače postojeće/dedup po `code`). Dodane kolone `ean`, `category`. Sljedeće: Kriška 2 = upload
-otpremnice (.xls Synesis) → parse → match po EAN → grupiranje po kupcu → izračun. Packer rubni
+preskače postojeće/dedup po `code`). Dodane kolone `ean`, `category`. Packer rubni
 slučajevi = zaseban track (Kolosijek B), nakon eksplicitnih pravila po artiklu.
+
+**Kriška 2 — upload otpremnice (u tijeku, slice 1: „pregled + primijeni"):**
+- ✅ **Parser + matcher** `app/src/lib/importOtpremnica.js` (SheetJS `xlsx`, dodan u `package.json`).
+  `parseOtpremnica(arrayBuffer)` → `{ docNo, customers:[{name, items:[{ean,rawName,qty,jmj,grupa}]}] }`;
+  grupira po `NAZIV_KUPCA`, čuva redoslijed. `matchToCatalog(parsed, products)` → match po `ean`
+  (+ `stats.matched/unmatched`). Odbacuje ne-Synesis datoteke (provjera zaglavlja SIFRA_ROBE/NAZIV_KUPCA).
+  Node-testirano na 3 slučaja: pravi `Otpremnica.xls` (LIN TRGOVINA, 3× SAX klima → **svi unmatched**,
+  jer nisu Heinner EAN), sintetički Heinner (2 kupca, matched+unmatched), i loša datoteka (odbijena).
+- ✅ **UI** `app/src/components/OtpremnicaImport.jsx` u planer editoru (`App.jsx`): gumb „Uvezi
+  otpremnicu", pregled kupaca/stavki (✓ u katalogu s dim / ✗ nije u katalogu + EAN), gumb „Primijeni
+  na utovar" → matchane stavke u editorov qty-model (N kupaca, boje ciklički). Nematchane samo
+  prikazane (ručna korekcija je sljedeći slice). Editor sad podnosi N kupaca (ne samo 2/3).
+- ⏳ **Ostaje (slice 2):** uređivanje nakon uvoza — (a) dodaj artikl (katalog/ručni), (b) makni
+  artikl (i nekataloški), (c) prioritet artikla/pošiljke (vidi „UI zahtjevi za upload" gore).
+- ⚠️ **Realnost:** tipična otpremnica su često **klime (SAX/druga marka)** kojih NEMA u Heinner katalogu
+  → dok se ne uvezu njihove dimenzije (HOME COMFORT / AC 2026 = parovi), packer nema što složiti.
+- 📝 **Napomena:** `Otpremnica.xls` (pravi, sadrži ime kupca) NIJE u repou — lokalni test fixture.
 
 **Tehnički mapping za Kriška 2 (otkriveno 2026-07-15):**
 - **Heinner Excel** `HEINNER _Q2_ADRIA.xlsx` (u korisnikovom `Downloads`, ne u repou): listovi

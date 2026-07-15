@@ -114,3 +114,22 @@ tbody tr { border-bottom: 1px solid #f2f4f8; }
 .homerow-name { font-weight: 600; font-size: 15px; }
 .homerow-date { font-size: 11px; color: #9aa2b1; }
 .homerow-actions { display: flex; align-items: center; gap: 8px; flex: none; }
+
+/* --- uvoz otpremnice --- */
+.import { margin-bottom: 12px; }
+.import-err { background: #fff3f0; border: 1px solid #f6c7bb; color: #b23c17; padding: 8px 10px; border-radius: 8px; font-size: 12px; margin-top: 8px; }
+.import-review { border: 1px solid #dce6f5; background: #f7faff; border-radius: 10px; padding: 10px; margin-top: 8px; }
+.import-head { font-size: 12px; color: #33507a; margin-bottom: 8px; }
+.import-cust { margin-bottom: 8px; }
+.import-cust-name { font-size: 13px; font-weight: 600; display: flex; align-items: center; gap: 6px; }
+.import-items { list-style: none; margin: 4px 0 0; padding: 0; }
+.import-items li { display: flex; align-items: center; gap: 6px; font-size: 12px; padding: 2px 0; }
+.import-items li .mark { width: 14px; text-align: center; font-weight: 700; }
+.import-items li.ok .mark { color: #1a8a4a; }
+.import-items li.miss { color: #97643a; }
+.import-items li.miss .mark { color: #c0392b; }
+.import-items .iname { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.import-items .iqty { flex: none; color: #556; }
+.import-items .itag { flex: none; font-size: 11px; color: #b23c17; background: #fff0eb; border-radius: 5px; padding: 1px 5px; }
+.import-review > .btn { margin-top: 6px; width: 100%; }
+.import-note { font-size: 11px; color: #97643a; margin-top: 6px; }

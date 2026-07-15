@@ -5,6 +5,7 @@ import { fetchArticles, fetchVehicle, saveOrder, updateOrder, loadOrder } from '
 import CatalogEditor from './components/CatalogEditor'
 import HomeList from './components/HomeList'
 import UtovarView from './components/UtovarView'
+import OtpremnicaImport from './components/OtpremnicaImport'
 import VanStage from './components/VanStage'
 import ResultPanel from './components/ResultPanel'
 import './App.css'
@@ -95,6 +96,12 @@ export default function App() {
   const loadExample = (x) => {
     setCustomers((prev) => prev.map((c, i) => ({ ...c, qty: EXAMPLES[x][i] ? mapQty(EXAMPLES[x][i], codeToId) : {} })))
   }
+  // Uvoz otpremnice: zamijeni kupce uvezenima (matchane stavke), N kupaca po dokumentu.
+  const applyImport = (importedCustomers, stats) => {
+    setCustomers(importedCustomers)
+    setNumCust(importedCustomers.length)
+    flash(`Uvezeno: ${stats.matched} u katalogu${stats.unmatched ? `, ${stats.unmatched} nepoznato (ručno dodaj)` : ''}`)
+  }
 
   // ---- stanja ----
   if (loading) return <div className="fullmsg">Učitavam podatke…</div>
@@ -139,10 +146,13 @@ export default function App() {
           {vehicle.name} {vehicle.L.toFixed(1)} × {vehicle.W.toFixed(1)} × {vehicle.H.toFixed(2)} m · nosivost {vehicle.payload} kg · vrata straga · <b>Kupac 1 = uz kabinu</b>
         </div>
 
+        <OtpremnicaImport products={productList} onApply={applyImport} />
+
         <div className="seg">
           {[2, 3].map((nn) => (
             <button key={nn} className={numCust === nn ? 'on' : ''} onClick={() => setNumCust(nn)}>{nn} kupca</button>
           ))}
+          {numCust !== 2 && numCust !== 3 && <button className="on">{numCust} {numCust === 1 ? 'kupac' : 'kupaca'}</button>}
         </div>
         <div className="seg">
           <button onClick={() => loadExample('a')}>Primjer A</button>
