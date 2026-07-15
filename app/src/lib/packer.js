@@ -76,6 +76,8 @@ function laterBlocked(c, ci, items) {
 //      ISPRED prema vratima → ne dođe se do c), ni
 //  (b) blokirati KASNIJEG kupca (index > ci; taj izlazi prije).
 // Slaganje kasnijeg NA ranijeg (npr. K2 na K1, bok uz bok) je OK — skine se s vrha kad taj izlazi.
+// IZNIMKA (topper preko granice): lagani komad ranijeg kupca SMIJE sjesti IZRAVNO NA teži komad
+// kasnijeg kupca — pri istovaru kasnijeg se samo skine (=1 pomicanje), ne zarobljava ga trajno.
 function structureBlocked(c, ci, items) {
   for (const B of items) {
     const zOv = c.z < B.z + B.dz - EPS && B.z < c.z + c.dz - EPS
@@ -87,7 +89,10 @@ function structureBlocked(c, ci, items) {
     } else if (B.custIdx > ci) {
       const front = yOv && zOv && (c.x + c.dx > B.x + B.dx + EPS)
       const above = xOv && zOv && (c.y + c.dy > B.y + B.dy + EPS)
-      if (front || above) return true // c blokira kasnijeg kupca
+      // Dozvoljeni topper: c leži IZRAVNO na B i lakši je od B → skine se pri istovaru (1 pomicanje).
+      const onTopOfB = above && Math.abs(c.y - (B.y + B.dy)) < 1e-4 && c.weight < B.weight - 1e-6
+      if (front) return true // c ispred kasnijeg kupca → zarobio bi ga
+      if (above && !onTopOfB) return true // c iznad kasnijeg (a nije dozvoljeni topper na njemu)
     }
   }
   return false
@@ -271,24 +276,100 @@ function packFillers(fillers, placed, totW0, bandStart, bandEnd, van) {
   return { mine, unplaced, totW }
 }
 
+// Može li domaćin H nositi komad L: L je strogo lakši, stane po visini kombija i H ga tlocrtno pokriva.
+function canHost(H, L, van) {
+  return L.weight < H.weight - 1e-6 && L.h + H.h <= van.H + EPS &&
+         H.l >= L.l - EPS && H.w >= L.w - EPS
+}
+// ČISTI TOPPER — komad koji IMA na što sjesti (postoji teži domaćin), a SAM NIJE domaćin ničemu (ništa
+// lakše ne može na njega). Samo takve IZDVAJAMO iz podnog slaganja (Faza 1) i sjedamo u zasebnoj fazi
+// (seatToppers). Domaćine (npr. suđerica nosi sušilicu) DRŽIMO na podu — inače, čim negdje postoji nešto
+// teže, srednji komad se krivo proglasi topperom, izgubi ulogu domaćina i nešto ispadne. Ovo je opće
+// pravilo "po dimenziji i težini": vrijedi za svaki aparat, ne samo sušilicu/veš mašinu.
+function isPureTopper(L, custs, products, van) {
+  let hasSeat = false, isHost = false
+  for (const cust of custs) {
+    const qty = cust.qty || {}
+    for (const k of Object.keys(qty)) {
+      if (!qty[k]) continue
+      const O = products[k]
+      if (canHost(O, L, van)) hasSeat = true // O je teži domaćin za L
+      if (canHost(L, O, van)) isHost = true  // L može nositi O → L je i sam domaćin
+    }
+  }
+  return hasSeat && !isHost
+}
+
+// STUP (host + topper): domaćin dolje, lagani topper gore, kao JEDNA kutija za slaganje. Puna visina =
+// host.h + topper.h; tlocrt = host (topper je uvijek ≤ host → stane unutra); težina = zbroj (podloga
+// nosi oboje). canLie=false → stoji uspravno. Nakon slaganja se "raspakira" na dva komada. Ovako topper
+// UVIJEK dobije svoj domaćin — nitko drugi ga ne može "pojesti" (korijen ranijih rubnih bugova).
+function makeColumn(host, topper) {
+  return { ...host, h: host.h + topper.h, weight: host.weight + topper.weight, canLie: false,
+           _column: { host, topper } }
+}
+// Upari svaki topper s DOMAĆINOM (teži komad koji ga tlocrtno pokriva). Prioritet: najmanje pomicanja
+// (topper na istog/ranijeg kupca = 0; na kasnijeg = 1), pa najbliži kupac, pa NAJLAKŠI dovoljan domaćin
+// — da teži domaćini ostanu slobodni kao baza za slaganje (npr. teška perilica na te/istu ispod nje).
+// Teže toppere pari prve (imaju manje mogućih domaćina). Svaki domaćin nosi najviše jedan topper;
+// nespojeni topperi vraćaju se kao obična podna struktura.
+function pairToppers(toppers, structAll, van) {
+  const usedHost = new Set(), columns = [], leftover = []
+  for (const T of [...toppers].sort((a, b) => b.weight - a.weight)) {
+    let best = null
+    for (const H of structAll) {
+      if (usedHost.has(H) || !canHost(H, T, van)) continue
+      const k = [T.custIdx < H.custIdx ? 1 : 0, Math.abs(T.custIdx - H.custIdx), H.weight]
+      if (!best || lessKey(k, best.k)) best = { H, k }
+    }
+    if (best) { usedHost.add(best.H); columns.push({ host: best.H, topper: T }) }
+    else leftover.push(T)
+  }
+  return { columns, leftover }
+}
+// Raspakiraj složene stupove: svaki placed stup → domaćin (dolje) + topper (gore, na host.h).
+function explodeColumns(items) {
+  const out = []
+  for (const p of items) {
+    if (!p._column) { out.push(p); continue }
+    const { host, topper } = p._column
+    const rot = Math.abs(p.dx - host.l) > 1e-6 // stup rotiran u tlocrtu (dx = host.w umjesto host.l)?
+    out.push({ ...host, x: p.x, y: p.y, z: p.z,
+               dx: rot ? host.w : host.l, dy: host.h, dz: rot ? host.l : host.w })
+    out.push({ ...topper, x: p.x, y: p.y + host.h, z: p.z,
+               dx: rot ? topper.w : topper.l, dy: topper.h, dz: rot ? topper.l : topper.w })
+  }
+  return out
+}
+
 // Jedan prolaz za zadanu strategiju: Faza 1 = struktura po kriškama (kabina→vrata); Faza 2 = fileri.
-function packOnce(custs, van, products, structCmp, structKey) {
+// deferToppers: ako true, lagani komadi (čisti topperi) UPARE se s domaćinom u STUP i slože zajedno;
+// ako false, sve ide na pod (klasika). Pretraga (computeBest) usporedi obje varijante.
+function packOnce(custs, van, products, structCmp, structKey, deferToppers) {
   const placed = [], unplaced = []
   let totW = 0
   const allFillers = []
-  // Struktura svih kupaca u JEDNU sekvencu, po redoslijedu kupaca (LIFO): K1, pa K2, pa K3…
-  const structSeq = []
-  custs.forEach((cust, ci) => {
+  // Klasifikacija po kupcu: struktura (na pod) vs ČISTI topperi (idu gore, na domaćina).
+  const perCust = custs.map((cust, ci) => {
     const { struct, fill } = customerParts(cust, ci, products, structCmp)
-    structSeq.push(...struct)
     allFillers.push(...fill)
+    const t = [], s = []
+    for (const it of struct) (deferToppers && isPureTopper(it, custs, products, van) ? t : s).push(it)
+    return { s, t }
   })
-  // Faza 1: kontinuirano pakiranje strukture — BEZ resetiranja reda po kupcu. Kad kupac završi,
-  // sljedeći NASTAVLJA puniti započeti red (nema rezerviranih praznih slotova). LIFO drži redoslijed:
-  // raniji kupci su prvi zauzeli pliće slotove, kasniji popune rupu do njih (bok uz bok, ne iza).
+  const toppers = perCust.flatMap(p => p.t)
+  const structAll = perCust.flatMap(p => p.s)
+  // Upari toppere s domaćinima u STUPOVE. Domaćin sa stupom → jedna kutija pune visine.
+  const { columns, leftover } = pairToppers(toppers, structAll, van)
+  const hostCol = new Map(); columns.forEach(c => hostCol.set(c.host, makeColumn(c.host, c.topper)))
+  // Redoslijed slaganja: po kupcu (LIFO: K1, K2, K3…); unutar kupca STUP prvi (da završi u graničnoj
+  // kriški, gdje topper ranijeg kupca smije biti na domaćinu kasnijeg), ostalo zadržava structCmp red.
+  const structSeq = structAll.map(it => hostCol.get(it) || it).concat(leftover)
+  structSeq.sort((a, b) => a.custIdx - b.custIdx || (b._column ? 1 : 0) - (a._column ? 1 : 0))
+  // Faza 1: kontinuirano pakiranje strukture (BEZ resetiranja reda po kupcu), pa RASPAKIRAJ stupove.
   const rs = packCustomer(structSeq, placed, totW, 0, van, structKey)
-  rs.mine.forEach(p => placed.push(p))
-  unplaced.push(...rs.unplaced)
+  explodeColumns(rs.mine).forEach(p => placed.push(p))
+  for (const u of rs.unplaced) u._column ? unplaced.push(u._column.host, u._column.topper) : unplaced.push(u)
   totW = rs.totW
   // Zona (band) svakog kupca iz STVARNOG rasporeda → za klasteriranje filera u Fazi 2.
   const bandStart = [], bandEnd = []
@@ -309,7 +390,7 @@ function packOnce(custs, van, products, structCmp, structKey) {
   const up = unloadPlan(placed)
   const usedVol = placed.reduce((s, p) => s + p.dx * p.dy * p.dz, 0)
   const score = { n: placed.length, vol: usedVol, moves: up.moves, w: totW }
-  return { placed, unplaced, weight: totW, up, score }
+  return { placed, unplaced, weight: totW, up, score, deferred: deferToppers && toppers.length > 0 }
 }
 
 // Bolji raspored: najviše utovareno → najveći volumen (gušće) → najmanje pomicanja → najveća masa.
@@ -320,14 +401,26 @@ function betterResult(a, b) {
   return a.score.w > b.score.w
 }
 
-// Glavni ulaz: MAX-LOAD pretraga — probaj sve strategije (redoslijed × ključ), vrati najbolji
-// valjani LIFO raspored. Dodavanje strategija nikad ne pogorša rezultat (monoton max).
+// Izbor između svih varijanti: (1) NAJVIŠE komada (max-load je kralj — nikad ne gubi artikl),
+// (2) NAJMANJE pomicanja (čist LIFO; ne reorganiziraj u više micanja bez potrebe), (3) na izjednačenju
+// pomicanja → PODIGNUTA varijanta (kompaktnije), (4) inače standardni betterResult.
+function pickBetter(a, b) {
+  if (a.score.n !== b.score.n) return a.score.n > b.score.n
+  if (a.score.moves !== b.score.moves) return a.score.moves < b.score.moves
+  if (a.deferred !== b.deferred) return a.deferred
+  return betterResult(a, b)
+}
+
+// Glavni ulaz: MAX-LOAD pretraga — probaj sve strategije (redoslijed × ključ) × {s podizanjem, bez},
+// vrati najbolji valjani LIFO raspored. Dodavanje strategija/varijanti nikad ne pogorša (monoton max).
 export function computeBest(custs, van, products) {
   let best = null
   for (const structCmp of STRUCT_CMPS) {
     for (const structKey of STRUCT_KEYS) {
-      const r = packOnce(custs, van, products, structCmp, structKey)
-      if (!best || betterResult(r, best)) best = r
+      for (const defer of [true, false]) {
+        const r = packOnce(custs, van, products, structCmp, structKey, defer)
+        if (!best || pickBetter(r, best)) best = r
+      }
     }
   }
   return best

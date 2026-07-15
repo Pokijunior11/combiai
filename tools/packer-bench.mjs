@@ -82,6 +82,37 @@ run('CASE-11 K1{H2,M4,PP1,PR2,TV1} K2{H2,MF10,M4,TV3} K3{H3} — sve mora stati 
 run('CASE-10 K1{H2,perilica1,M4} — mikrovalne u nišu iznad veš mašine, ne na vrh frižidera',
   [{hladnjak:2,perilica:1,mikro:4}])
 
+// ---- topper preko granice: lagana sušilica K1 sjedne NA tešku veš mašinu K2 (screenshot 10:51) ----
+run('CASE-12 K1{H2,S1} K2{H2,PR1} K3{H12} — sušilica K1 na veš mašinu K2 (1 pomicanje)',
+  [{hladnjak:2,susilica:1},{hladnjak:2,perilica:1},{hladnjak:12}])
+
+// ---- univerzalnost toppera: dodavanje K2 sušilice NE smije izbaciti K1 sušilicu (screenshot 13:48) ----
+run('CASE-13 K1{H3,S1} K2{H2,PR1,S1} — obje sušilice stanu (K1 na veš mašinu, K2 na pod)',
+  [{hladnjak:3,susilica:1},{hladnjak:2,perilica:1,susilica:1},{}])
+
+// ---- topper radi na SVAKI teži komad, ne samo veš mašinu (suđerica/štednjak) (screenshot 14:35) ----
+run('CASE-14a suđerica K1{H2,S1} K2{H3,PP1} — sušilica na suđericu (kao na veš mašinu)',
+  [{hladnjak:2,susilica:1},{hladnjak:3,posudje:1},{}])
+run('CASE-14b štednjak K1{H2,S1} K2{H3,ST1} — sušilica na štednjak',
+  [{hladnjak:2,susilica:1},{hladnjak:3,stednjak:1},{}])
+
+// ---- puni po redu; digni tek kad se napuni. Dodavanje istotežinske perilice NE smije napraviti
+// višak micanja — zelena perilica sjedne na plavu (K3 na K2), 0 pomicanja (screenshot 15:30) ----
+run('CASE-16 K1{H2,S1} K2{H5,PR1,S1} K3{H8,PR1} — čist LIFO, 0 pomicanja',
+  [{hladnjak:2,susilica:1},{hladnjak:5,perilica:1,susilica:1},{hladnjak:8,perilica:1}])
+
+// ---- STUP: topper uvijek dobije domaćina, i kad kupac ima DVA domaćina (dupli), i kad je domaćin
+// lakši od nečeg u kasnijem kupcu. Prije je sušilica/frižider ispadao (screenshot 09:53) ----
+run('CASE-17 K1{H2,S1} K2{H5,PP1,PR1} K3{H9,PP1} — dupli domaćin u K2, sve 20 stane',
+  [{hladnjak:2,susilica:1},{hladnjak:5,posudje:1,perilica:1},{hladnjak:9,posudje:1}])
+run('CASE-18 K1{H2,S1} K2{H5,PP1} K3{H9,PR1,ST1} — domaćin (PP) lakši od PR/ST u K3, sve 20 stane',
+  [{hladnjak:2,susilica:1},{hladnjak:5,posudje:1},{hladnjak:9,perilica:1,stednjak:1}])
+
+// ---- pairanje bira NAJLAKŠEG domaćina za topper (da najteži ostane baza): K3 perilica rublja (70,
+// najteža, mora na pod/na istu) ne smije ispasti jer je stup zauzeo K2 PR (screenshot 10:17) ----
+run('CASE-19 K1{H2,S1} K2{H5,PP1,PR1} K3{H9,PR1} — sušilica na PP (ne PR), K3 PR na K2 PR, sve 20',
+  [{hladnjak:2,susilica:1},{hladnjak:5,posudje:1,perilica:1},{hladnjak:9,perilica:1}])
+
 // ---- struktura kasnijeg kupca NE SMIJE natrag na tavan ranijeg (screenshot 15:05) ----
 run('CASE-9  K1{H2,MF3,posudje1,perilica1,stednjak1} K2{H5} K3{H2,MF1,susilica1,M11} — zelena struktura ne ide natrag',
   [{hladnjak:2,mfrizider:3,posudje:1,perilica:1,stednjak:1},{hladnjak:5},{hladnjak:2,mfrizider:1,susilica:1,mikro:11}])
