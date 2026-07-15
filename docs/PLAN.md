@@ -144,6 +144,11 @@ slučajevi = zaseban track (Kolosijek B), nakon eksplicitnih pravila po artiklu.
   (article_id, qty). Upload otpremnice puni upravo ovo: grupiraj stavke po `NAZIV_KUPCA` → kupci.
 - **Frontend za Kriška 2:** `npm i xlsx` (SheetJS, čita .xls i .xlsx u pregledniku); UI gumb u
   `UtovarView.jsx`; match u novi `lib/importOtpremnica.js`; postojeći `packer.js` ostaje.
+- **UI zahtjevi za upload (korisnik, 2026-07-15):** nakon uvoza otpremnice u sučelju se mora moći:
+  (a) **dodati** artikl, (b) **maknuti** artikl — i onaj koji postoji u katalogu i onaj koji ne
+  postoji (ručna korekcija nakon matcha), (c) **označiti prioritet** artikla/pošiljke. (Trenutni +/-
+  ostaje za testiranje.) Naziv artikla u editoru: **proizvođač + model** (npr. „Heinner {code}"),
+  ne cijeli marketinški opis — riješeno u `App.jsx`/`db.js` za Heinner (po `ean`).
 
 ---
 

@@ -8,6 +8,7 @@ function rowToProduct(r) {
     id: r.id,
     code: r.code,
     name: r.name,
+    ean: r.ean,
     l: Number(r.length_cm) / 100,
     w: Number(r.width_cm) / 100,
     h: Number(r.height_cm) / 100,

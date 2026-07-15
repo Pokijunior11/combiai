@@ -162,7 +162,7 @@ export default function App() {
             {productList.map((p) => (
               <tr key={p.id}>
                 <td className="prod">
-                  <div className="pname">{p.name}</div>
+                  <div className="pname">{p.ean ? `Heinner ${p.code}` : p.name}</div>
                   <div className="pdim">{Math.round(p.l * 100)}×{Math.round(p.w * 100)}×{Math.round(p.h * 100)}cm · {p.weight}kg{p.canLie ? ' · liježe' : ''}</div>
                 </td>
                 {active.map((c, ci) => (
