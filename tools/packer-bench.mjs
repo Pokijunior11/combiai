@@ -113,6 +113,11 @@ run('CASE-18 K1{H2,S1} K2{H5,PP1} K3{H9,PR1,ST1} — domaćin (PP) lakši od PR/
 run('CASE-19 K1{H2,S1} K2{H5,PP1,PR1} K3{H9,PR1} — sušilica na PP (ne PR), K3 PR na K2 PR, sve 20',
   [{hladnjak:2,susilica:1},{hladnjak:5,posudje:1,perilica:1},{hladnjak:9,perilica:1}])
 
+// ---- FILER (mikrovalna) NE smije mijenjati strukturu: dodavanje mikrovalne = +1 komad na vrh, ne
+// izbacivanje strukturnog komada. Prije je mikro činio sušilicu "domaćinom" pa je sve pucalo (10:43) ----
+run('CASE-20 K1{H2,S1} K2{H2,ST1} K3{H11,M1,PP1,PR1,ST1,S1} — mikro na vrh, sve 22 stane',
+  [{hladnjak:2,susilica:1},{hladnjak:2,stednjak:1},{hladnjak:11,mikro:1,posudje:1,perilica:1,stednjak:1,susilica:1}])
+
 // ---- struktura kasnijeg kupca NE SMIJE natrag na tavan ranijeg (screenshot 15:05) ----
 run('CASE-9  K1{H2,MF3,posudje1,perilica1,stednjak1} K2{H5} K3{H2,MF1,susilica1,M11} — zelena struktura ne ide natrag',
   [{hladnjak:2,mfrizider:3,posudje:1,perilica:1,stednjak:1},{hladnjak:5},{hladnjak:2,mfrizider:1,susilica:1,mikro:11}])

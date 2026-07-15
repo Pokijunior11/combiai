@@ -294,7 +294,10 @@ function isPureTopper(L, custs, products, van) {
       if (!qty[k]) continue
       const O = products[k]
       if (canHost(O, L, van)) hasSeat = true // O je teži domaćin za L
-      if (canHost(L, O, van)) isHost = true  // L može nositi O → L je i sam domaćin
+      // L je "domaćin" samo ako nosi drugi STRUKTURNI komad — fileri (mikrovalne) idu u tavan zasebno
+      // (packFillers) i NE smiju L pretvoriti iz toppera u domaćina (inače dodavanje mikrovalne pomiče
+      // strukturu i nešto ispadne). Zato preskačemo filere pri provjeri "je li L domaćin".
+      if (!isFiller(O) && canHost(L, O, van)) isHost = true
     }
   }
   return hasSeat && !isHost
