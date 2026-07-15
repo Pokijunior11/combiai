@@ -79,6 +79,47 @@ Poznata dugovanja (iz `issue.txt` i dogovora):
 - [ ] Sakriti „uredi/obriši" od skladištara (uloge planer/skladištar). **Nisko prioritetno** — korisnik OK da za sad ostane (interni alat, neće se zloupotrebljavati).
 - [ ] (ostale sitnice — korisnik nabraja kad uoči)
 
+## 4c. Od „pogađanja" prema pravilima po artiklu (metodologija — priprema za produkciju)
+> Kontekst: kroz sesiju 2026-07-15 motor je **pogađao uloge iz težine/visine** (topper/domaćin/filer).
+> Skoro svi rubni bugovi bili su u tom pogađanju, ne u samom slaganju. S pravim podacima (Heinner Excel)
+> prelazimo na **eksplicitne atribute po artiklu** → predvidljivo, bez „jedno pomrda kad drugo napravimo".
+
+**Princip — 3 odvojena sloja:**
+1. **PODACI** — svaki artikl ima atribute (u `article` tablici).
+2. **PRAVILA** — motor **čita atribute**, ne pogađa iz brojki.
+3. **TESTOVI** — svaki slučaj/pravilo = red u `tools/packer-bench.mjs`. Ovo je ključ protiv regresija
+   („jedno pomrda drugo") — svaki popravak mora ostaviti sve stare bench-slučajeve valjane.
+
+**Atributi po artiklu (počni s malo, dodaj kad zatreba — ne svih 20 odjednom):**
+- Fizika: dužina, širina, visina (brutto), težina — ✅ imamo.
+- `smije_lijegati` (orijentacija) — ✅ imamo (`canLie`).
+- `krhko` / `max_na_vrhu_kg` — smije li se i koliko stavljati na vrh (0 = ništa; npr. TV, staklo).
+- `par_id` (ili `grupa`) — dvije jedinice klime (unutarnja+vanjska) moraju zajedno/blizu.
+- (kasnije po potrebi: `kategorija` za defaulte, „mora uspravno u vožnji", stohovanje…).
+
+**Heinner Excel — realno:** daje **dimenzije, težinu, kategoriju, EAN/SKU**. Domenska pravila
+(`krhko`, `par`, orijentacija) proizvođač NE daje → njih definiraš ti, najlakše **po kategoriji**
+(npr. „klima → par", „TV → krhko+uspravno") uz iznimke po pojedinom SKU.
+
+**Koraci (redoslijed):**
+1. Pogledati Heinner Excel — koje kolone stvarno ima → **mapirati** na naše fizičke atribute.
+2. Dopuniti `article` tablicu **domenskim kolonama** — počni s onima koje SAD trebaš (klime: `par_id`),
+   ne svima odjednom.
+3. **Uvoz Excela → seed kataloga** (fizika iz Excela; domenska pravila default po kategoriji, pa ručno tune).
+4. Motor: zamijeniti „pogađanje" (heuristike po težini/visini) **čitanjem atributa** — jedno po jedno
+   pravilo, svako s bench-testom.
+5. **Klime (par)** — novo pravilo „grupa mora zajedno/blizu"; dizajnirati zasebno (motor to još ne zna).
+
+**Odgovori na dvojbe (2026-07-15):**
+- „Jesam li prvo trebao pripremiti sve podatke?" — **Ne.** Nisi mogao znati koja pravila trebaš dok ih
+  nisi vidio na primjerima. Reaktivno otkrivanje ti je REKLO koji atributi su bitni. Sad ih formaliziraš —
+  to je normalan, dobar redoslijed (spiralno, ne vodopad).
+- „Ima li bolji način od kolona+pravila?" — Za ovu domenu (fizička ograničenja, mora biti **objašnjivo
+  skladištaru**) atributi+pravila su pravi izbor. Alternativa (čisti optimizacijski solver / ML) je
+  nepredvidljiva i teško objašnjiva — ne paše.
+
+---
+
 ## 5. Fazni plan (V1)
 > Minimalno-prvo. Svaka faza: **cilj → gotovo kad (definition of done) → commit**. Radi se jedna po jedna.
 > „👤 Ti" = zadaci koje korisnik mora napraviti (računi, ključevi). „🤖 Ja" = kod/postavljanje.
