@@ -123,22 +123,29 @@ Poznata dugovanja (iz `issue.txt` i dogovora):
 preskače postojeće/dedup po `code`). Dodane kolone `ean`, `category`. Packer rubni
 slučajevi = zaseban track (Kolosijek B), nakon eksplicitnih pravila po artiklu.
 
-**Kriška 2 — upload otpremnice (u tijeku, slice 1: „pregled + primijeni"):**
-- ✅ **Parser + matcher** `app/src/lib/importOtpremnica.js` (SheetJS `xlsx`, dodan u `package.json`).
-  `parseOtpremnica(arrayBuffer)` → `{ docNo, customers:[{name, items:[{ean,rawName,qty,jmj,grupa}]}] }`;
-  grupira po `NAZIV_KUPCA`, čuva redoslijed. `matchToCatalog(parsed, products)` → match po `ean`
-  (+ `stats.matched/unmatched`). Odbacuje ne-Synesis datoteke (provjera zaglavlja SIFRA_ROBE/NAZIV_KUPCA).
-  Node-testirano na 3 slučaja: pravi `Otpremnica.xls` (LIN TRGOVINA, 3× SAX klima → **svi unmatched**,
-  jer nisu Heinner EAN), sintetički Heinner (2 kupca, matched+unmatched), i loša datoteka (odbijena).
-- ✅ **UI** `app/src/components/OtpremnicaImport.jsx` u planer editoru (`App.jsx`): gumb „Uvezi
-  otpremnicu", pregled kupaca/stavki (✓ u katalogu s dim / ✗ nije u katalogu + EAN), gumb „Primijeni
-  na utovar" → matchane stavke u editorov qty-model (N kupaca, boje ciklički). Nematchane samo
-  prikazane (ručna korekcija je sljedeći slice). Editor sad podnosi N kupaca (ne samo 2/3).
-- ⏳ **Ostaje (slice 2):** uređivanje nakon uvoza — (a) dodaj artikl (katalog/ručni), (b) makni
-  artikl (i nekataloški), (c) prioritet artikla/pošiljke (vidi „UI zahtjevi za upload" gore).
-- ⚠️ **Realnost:** tipična otpremnica su često **klime (SAX/druga marka)** kojih NEMA u Heinner katalogu
-  → dok se ne uvezu njihove dimenzije (HOME COMFORT / AC 2026 = parovi), packer nema što složiti.
-- 📝 **Napomena:** `Otpremnica.xls` (pravi, sadrži ime kupca) NIJE u repou — lokalni test fixture.
+**Kriška 2 — upload otpremnice (akumulativni editor):**
+- **MODEL (ispravljeno na zahtjev korisnika):** **jedna otpremnica = jedan kupac.** Planer uploada
+  **više** otpremnica koje se **akumuliraju po kupcu**: isti naziv kupca → dopune se njegove stavke
+  (ista šifra → zbroji količinu); novi naziv → novi blok kupca ispod. NEMA više katalog-grida (svih 364
+  artikla × kupci) — zamijenjen listom blokova kupaca.
+- ✅ **Parser + matcher** `app/src/lib/importOtpremnica.js` (SheetJS `xlsx`).
+  `parseOtpremnica(arrayBuffer)` → `{ docNo, customers:[{name, items:[{ean,rawName,qty,jmj,grupa}]}] }`
+  (grupira po `NAZIV_KUPCA`); `matchToCatalog` → match po `ean` (+ `stats`). Odbacuje ne-Synesis
+  datoteke (provjera zaglavlja). Node-testirano.
+- ✅ **UI editor** `App.jsx` + `OtpremnicaImport.jsx`: gumb „Uvezi otpremnicu" (višekratni upload,
+  akumulira). Svaki kupac = blok: naziv + stavke ispod, svaka s **±količina**, **✕ makni artikl**,
+  **★ prioritet** („mora u kombi", prioritetne idu na vrh liste). Nematchane stavke prikazane
+  crveno („nije u katalogu") i uklonjive. Packer/3D/spremanje rade nad matchanim stavkama.
+- ✅ **Testni fixt+generator** `tools/make_test_otpremnice.mjs` → jednokupčane otpremnice s Heinner
+  robom (sve se matcha): `Otpremnica-Split-1/-2.xls` (isti kupac → test spajanja), `-Maric.xls`,
+  `-DomPlus.xls`, `-Frigo.xls`. Simulirano headless (accumulate + `computeBest`): 3 uploada → 2 kupca
+  (Split spojen), packer 20/20.
+- ⏳ **Ostaje:** (a) **prioritet u packer** — trenutačno samo vizualno/sortiranje, motor ga još ne
+  forsira (nosivost/„mora stati" = Kolosijek B). (b) **perzistencija** prioriteta i nematchanih stavki
+  (DB `order_item` nema kolone → spremaju se samo matchane stavke). (c) ručni **dodaj artikl** iz
+  kataloga (bez otpremnice). (d) editiranje **naziva kupca**.
+- ⚠️ **Realnost:** pravi `Otpremnica.xls` = klime (SAX), kojih NEMA u Heinner katalogu → svi unmatched
+  dok se ne uvezu dim (HOME COMFORT / AC 2026 = parovi). `Otpremnica.xls` (ime pravog kupca) NIJE u repou.
 
 **Tehnički mapping za Kriška 2 (otkriveno 2026-07-15):**
 - **Heinner Excel** `HEINNER _Q2_ADRIA.xlsx` (u korisnikovom `Downloads`, ne u repou): listovi

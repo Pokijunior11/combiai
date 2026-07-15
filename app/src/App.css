@@ -116,20 +116,28 @@ tbody tr { border-bottom: 1px solid #f2f4f8; }
 .homerow-actions { display: flex; align-items: center; gap: 8px; flex: none; }
 
 /* --- uvoz otpremnice --- */
-.import { margin-bottom: 12px; }
+.import { margin-bottom: 10px; }
+.import > .btn { width: 100%; }
 .import-err { background: #fff3f0; border: 1px solid #f6c7bb; color: #b23c17; padding: 8px 10px; border-radius: 8px; font-size: 12px; margin-top: 8px; }
-.import-review { border: 1px solid #dce6f5; background: #f7faff; border-radius: 10px; padding: 10px; margin-top: 8px; }
-.import-head { font-size: 12px; color: #33507a; margin-bottom: 8px; }
-.import-cust { margin-bottom: 8px; }
-.import-cust-name { font-size: 13px; font-weight: 600; display: flex; align-items: center; gap: 6px; }
-.import-items { list-style: none; margin: 4px 0 0; padding: 0; }
-.import-items li { display: flex; align-items: center; gap: 6px; font-size: 12px; padding: 2px 0; }
-.import-items li .mark { width: 14px; text-align: center; font-weight: 700; }
-.import-items li.ok .mark { color: #1a8a4a; }
-.import-items li.miss { color: #97643a; }
-.import-items li.miss .mark { color: #c0392b; }
-.import-items .iname { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.import-items .iqty { flex: none; color: #556; }
-.import-items .itag { flex: none; font-size: 11px; color: #b23c17; background: #fff0eb; border-radius: 5px; padding: 1px 5px; }
-.import-review > .btn { margin-top: 6px; width: 100%; }
-.import-note { font-size: 11px; color: #97643a; margin-top: 6px; }
+.empty-hint { border: 1px dashed #cdd6e4; background: #f8fafd; border-radius: 10px; padding: 16px; text-align: center; font-size: 13px; color: #66748c; line-height: 1.5; }
+
+/* --- blokovi kupaca (akumulirani uvoz) --- */
+.blocks { margin-top: 4px; }
+.cb { border: 1px solid #e2e7ef; border-radius: 10px; padding: 8px 10px 6px; margin-bottom: 10px; background: #fff; }
+.cb-head { display: flex; align-items: center; gap: 7px; padding-bottom: 6px; border-bottom: 1px solid #eef1f6; margin-bottom: 4px; }
+.cb-name { flex: 1; font-weight: 700; font-size: 14px; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cb-none { font-size: 12px; color: #9aa2b1; padding: 4px 0; }
+.cb-item { display: flex; align-items: center; gap: 8px; padding: 5px 0; border-bottom: 1px solid #f4f6fa; }
+.cb-item:last-child { border-bottom: none; }
+.cb-item.prio { background: #fffbef; margin: 0 -6px; padding: 5px 6px; border-radius: 6px; border-bottom: none; }
+.cb-main { flex: 1; min-width: 0; }
+.cb-label { font-size: 13px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cb-dim { font-size: 11px; color: #8a93a3; }
+.cb-item.miss .cb-label { color: #97643a; }
+.itag { margin-left: 6px; font-size: 10px; font-weight: 600; color: #b23c17; background: #fff0eb; border-radius: 5px; padding: 1px 5px; vertical-align: middle; }
+.star { flex: none; width: 22px; height: 22px; border: 1px solid #d2d8e2; background: #f6f8fb; border-radius: 6px; color: #c4ccd8; font-size: 13px; line-height: 1; cursor: pointer; }
+.star.on { background: #ffd24d; border-color: #e6b52e; color: #7a5a00; }
+.cb-del { flex: none; width: 22px; height: 22px; border: 1px solid #ecd6d0; background: #fff6f3; border-radius: 6px; color: #c0653f; font-size: 12px; line-height: 1; cursor: pointer; }
+.cb-del:active { background: #fbe7df; }
+.link.danger { color: #c0392b; }
+.blocks-sum { font-size: 12px; color: #66748c; text-align: right; margin: 2px 2px 8px; }
