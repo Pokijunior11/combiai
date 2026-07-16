@@ -1,5 +1,5 @@
 import { useMemo, useState, useEffect } from 'react'
-import { computeBest } from './lib/packer'
+import { computeWithMust } from './lib/mustFit'
 import { fetchArticles, fetchVehicle, saveOrder, updateOrder, loadOrder } from './lib/db'
 import CatalogEditor from './components/CatalogEditor'
 import HomeList from './components/HomeList'
@@ -74,7 +74,7 @@ export default function App() {
   const packCustomers = useMemo(() => toPackCustomers(blocks), [blocks])
   const best = useMemo(() => {
     if (!vehicle || productList.length === 0 || blocks.length === 0) return null
-    return computeBest(packCustomers, vehicle, productsById)
+    return computeWithMust(packCustomers, vehicle, productsById)
   }, [packCustomers, vehicle, productsById, productList.length, blocks.length])
 
   // ---- navigacija ----

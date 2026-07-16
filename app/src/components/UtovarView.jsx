@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { loadOrder } from '../lib/db'
-import { computeBest } from '../lib/packer'
+import { computeWithMust } from '../lib/mustFit'
 import VanStage from './VanStage'
 import ResultPanel from './ResultPanel'
 
@@ -17,7 +17,7 @@ export default function UtovarView({ id, products, vehicle, onBack }) {
 
   const best = useMemo(() => {
     if (!order) return null
-    return computeBest(order.customers, vehicle, products)
+    return computeWithMust(order.customers, vehicle, products)
   }, [order, vehicle, products])
 
   if (err) return <div className="fullmsg err">Greška pri otvaranju:<br />{err}</div>

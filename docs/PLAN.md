@@ -45,27 +45,36 @@ Poanta: kontekst se drži u `.md` fajlovima (ne u glavi/sesiji), svaki korak je 
   (migracija `supabase/f7_must_qty.sql`); `db.js` sprema/učita; `App.jsx` ★ = uključi/isključi „mora"
   (default svi komadi) + stepper „mora N / qty", smanjenje qty klampa must, obavezne na vrh. DoD (od 5
   mora 3 → spremi → reopen → očuvano) prošao.
+- **Prioritet DIO 2 IMPLEMENTIRANO** 🟡 (2026-07-16, headless-testirano, čeka localhost potvrdu) —
+  **motor FORSIRA „mora"** kroz **sloj odabira iznad packera** (`app/src/lib/mustFit.js`,
+  `computeWithMust`). Packer NIJE diran (crna kutija). Tok: pusti sve → ako obavezno ne stane, izbaci
+  najveće NEOBAVEZNE komade i ponovo `computeBest`, dok sva „mora" ne stanu (ili nema više neobaveznog →
+  „ne stane ni obavezno"). Rezultat nosi `mustFits`/`mustShort`/`dropped`; `ResultPanel` prikazuje
+  „izbačeno da obavezno stane" i „ne stane ni obavezno". Spojeno u `App.jsx` i `UtovarView.jsx`
+  (skladištar vidi isti plan). Test `tools/mustfit-bench.mjs` (A stane/B izbaci/C nemoguće/D bez-mora).
 - **Ostaje (Kriška 2 rep):** perzistencija **nematchanih** stavki (DB sprema samo matchano), ručni
   „dodaj artikl" bez otpremnice, editiranje naziva kupca.
 - **Stack:** Vite + React + react-three-fiber · Supabase · Vercel. Odluke: npm, JavaScript, app u `app/`.
 
-### 👉 SLJEDEĆI MICRO-KORAK (za iduću sesiju) — Prioritet DIO 2: MOTOR FORSIRA „mora"
+### ✅ Prioritet DIO 2 — MOTOR FORSIRA „mora" (IMPLEMENTIRANO 2026-07-16, čeka localhost potvrdu)
 **Live: čim planer označi ★ „mora", app izbaci najmanje bitne NEOBAVEZNE komade da obavezni stanu.**
-- **Kontekst:** dio 1 (uhvati+spremi „mora + količina") je gotov (gore). Dio 2 = motor to **forsira**.
-  Korisnik to izričito traži („da izbaci druge stvari po svom izračunu da bitne stanu, live").
-- **DOGOVORENI PRISTUP (2026-07-16) — sloj odabira IZNAD packera (packer = crna kutija, heuristike se
-  NE diraju → whack-a-mole ostaje zatvoren):**
-  1. Podijeli stavke na MORA (`must_qty`) i NEOBAVEZNO.
-  2. Pokreni `computeBest`. Ako sva MORA stanu → prikaži plan (višak neobaveznog = „nije stalo").
-  3. Ako neko MORA ne stane → **izbaci najmanje bitne NEOBAVEZNE** komade i ponovno `computeBest`
-     (packer sam presloži), dok sva MORA ne stanu (težina **i** prostor).
-  4. Jasno prikaži što je izbačeno da bi obavezno stalo. Ako ni sama MORA ne stanu → iskreno
-     „ne stane ni obavezno" (planer mora smanjiti).
-- **DoD:** označim par aparata „mora", dodam višak neobaveznog preko kapaciteta → app automatski izbaci
-  neobavezno tako da sva „mora" stanu, i napiše što je izbacio. Reaktivno (bez gumba).
-- **Napomena:** ovo je taj parkirani „(2) motor forsira" korak iz §4/§4c/§4d. Pristup gore ga radi BEZ
-  ponovnog otvaranja §4 „Reset motora" (ne mijenja logiku slaganja, samo ODABIR što ulazi).
-- **Ne raditi u ovom koraku:** mijenjati heuristike u `packer.js`, barkod, redoslijed pod→strop.
+- **Riješeno kroz `app/src/lib/mustFit.js` → `computeWithMust(customers, van, products)`** (sloj IZNAD
+  packera; `packer.js` NIJE diran — crna kutija). Ugrađeno u `App.jsx` + `UtovarView.jsx`; poruke u
+  `ResultPanel.jsx`; test `tools/mustfit-bench.mjs`.
+- **Realizirani pristup (kako je i dogovoreno):**
+  1. Podijeli na MORA (`must_qty`) i NEOBAVEZNO. 2. `computeBest`; ako sva MORA stanu → gotovo.
+  3. Ako neko MORA ne stane → izbaci NAJVEĆI neobavezan komad (volumen, pa težina) i opet `computeBest`,
+     dok sva MORA ne stanu ili ponestane neobaveznog. 4. Rezultat: `mustFits`, `mustShort`, `dropped[]`.
+- **Detalj „najmanje bitno":** među neobaveznima NEMA ranga → mičemo NAJVEĆE prvo (najviše oslobodi →
+  najmanje ukupno izbačeno). Bitna spoznaja iz testiranja: packerove strategije slažu teško/veliko
+  PRVO, pa se obavezno istisne samo kad je LAGANO/malo a neobavezno proždire kapacitet (v. bench B).
+- **DoD (ispunjen headless u benchu, čeka ručnu localhost provjeru):** označim „mora", dodam višak
+  neobaveznog preko kapaciteta → app automatski izbaci neobavezno da „mora" stane i napiše što je izbacio.
+- **Poznata dugovanja DIO 2 (za kasnije, ne blokira):** (a) izbacivanje ide po VOLUMENU; kad je preljev
+  strogo TEŽINSKI, težinski-prvo bi bilo preciznije. (b) svaki drop = novi `computeBest` (16 packova) →
+  za jako velike otpremnice moglo bi biti sporo; optimizirati ako zatreba. (c) izbačeno se ne pamti u
+  editoru (samo prikaz) — planer sam smanji količine ako želi trajno.
+- **Nije dirano (namjerno):** heuristike u `packer.js`, barkod, redoslijed pod→strop.
 
 ---
 
@@ -270,7 +279,7 @@ slučajevi = zaseban track (Kolosijek B), nakon eksplicitnih pravila po artiklu.
 1. ✅ „Planiraj novi utovar" tipka.
 2. ✅ „Uvezi otpremnicu" → dolje se pojavi **kupac + broj otpremnice + stavke**.
 3. ✅ Druga otpremnica **istog kupca** → grupira pod isti kupac; vidljivi **svi brojevi otpremnica** (Kriška 2).
-4. ✅/⏳ **PROFINJENJE prioriteta:** po artiklu **„mora u kombi" + KOLIČINA** koja mora (npr. 3 od 5). **DIO 1 (UI+perzistencija) ✅** — ★ + stepper „mora N/qty", sprema se u `must_qty`. **DIO 2 (motor forsira) ⏳** — sloj odabira iznad packera (vidi „SLJEDEĆI MICRO-KORAK" §0).
+4. ✅/⏳ **PROFINJENJE prioriteta:** po artiklu **„mora u kombi" + KOLIČINA** koja mora (npr. 3 od 5). **DIO 1 (UI+perzistencija) ✅** — ★ + stepper „mora N/qty", sprema se u `must_qty`. **DIO 2 (motor forsira) ✅** (čeka localhost potvrdu) — sloj odabira `mustFit.js` iznad packera (vidi §0).
 5. ✅/⏳ **Uz bok se ODMAH** računa najbolji utovar + **stane/ne-stane** (reaktivno već postoji; kvaliteta = §4 „Reset motora").
 6. ✅ „Spremi utovar" → gotovo. Nove otpremnice kolegica radi sama izvan app-a.
 

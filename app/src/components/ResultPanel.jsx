@@ -8,6 +8,9 @@ export default function ResultPanel({ best, vehicle, customers }) {
   const over = weight > vehicle.payload
   const maxY = best.placed.reduce((m, p) => Math.max(m, p.y + p.dy), 0)
   const n = best.placed.length
+  const dropped = best.dropped || []                       // neobavezno izbačeno da obavezno stane
+  const mustFits = best.mustFits !== false                 // stanu li sva „mora u kombi"
+  const nothingLeftOut = dropped.length === 0 && best.unplaced.length === 0
 
   return (
     <>
@@ -18,9 +21,16 @@ export default function ResultPanel({ best, vehicle, customers }) {
         <div className="bar"><div style={{ width: `${wPct.toFixed(0)}%`, background: over ? '#c0392b' : '#1a8a4a' }} /></div>
         <div>Utovareno: <b>{n}</b> kom · najviši stup <b>{maxY.toFixed(2)} m</b></div>
         <div>Pomicanja pri istovaru: <b>{best.up.moves}</b></div>
-        {best.unplaced.length
-          ? <div className="warn">Nije stalo: {best.unplaced.length} kom ({best.unplaced.map((u) => u.name).join(', ')}).</div>
-          : <div className="ok">✓ Sve stane.</div>}
+        {!mustFits && (
+          <div className="warn">⚠ Ne stane ni sve <b>obavezno</b> — {best.mustShort} kom obaveznog ne stane. Smanji količine ili obavezne stavke.</div>
+        )}
+        {dropped.length > 0 && (
+          <div className="warn">Izbačeno (neobavezno) da obavezno stane: {dropped.map((d) => `${d.name}×${d.count}`).join(', ')}.</div>
+        )}
+        {best.unplaced.length > 0 && (
+          <div className="warn">Nije stalo (neobavezno): {best.unplaced.length} kom ({best.unplaced.map((u) => u.name).join(', ')}).</div>
+        )}
+        {mustFits && nothingLeftOut && <div className="ok">✓ Sve stane.</div>}
         {over && <div className="warn">Prekoračena nosivost — makni nešto ili drugi kombi.</div>}
       </div>
 
