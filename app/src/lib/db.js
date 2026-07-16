@@ -85,7 +85,8 @@ export async function listOrders() {
   return data
 }
 
-// customers: [{ name, color, qty: { [articleId]: n } }]
+// customers: [{ name, color, qty: { [articleId]: n }, must: { [articleId]: n } }]
+// must[articleId] = koliko komada MORA u kombi (0 = nije obavezno). Motor ga (za sad) ne forsira.
 export async function saveOrder({ name, vehicleId, customers }) {
   const { data: ord, error: e1 } = await supabase
     .from('orders').insert({ name: name.trim(), vehicle_id: vehicleId }).select().single()
@@ -99,7 +100,7 @@ export async function saveOrder({ name, vehicleId, customers }) {
   customers.forEach((c, i) => {
     const cust = custs.find((x) => x.position === i)
     for (const [articleId, qty] of Object.entries(c.qty || {})) {
-      if (qty > 0) items.push({ order_customer_id: cust.id, article_id: articleId, qty })
+      if (qty > 0) items.push({ order_customer_id: cust.id, article_id: articleId, qty, must_qty: Math.min(c.must?.[articleId] || 0, qty) })
     }
   })
   if (items.length) {
@@ -123,11 +124,15 @@ export async function loadOrder(id) {
     if (e3) throw e3
     items = data
   }
-  const customers = custs.map((c) => ({
-    name: c.name,
-    color: c.color,
-    qty: Object.fromEntries(items.filter((it) => it.order_customer_id === c.id).map((it) => [it.article_id, it.qty])),
-  }))
+  const customers = custs.map((c) => {
+    const mine = items.filter((it) => it.order_customer_id === c.id)
+    return {
+      name: c.name,
+      color: c.color,
+      qty: Object.fromEntries(mine.map((it) => [it.article_id, it.qty])),
+      must: Object.fromEntries(mine.map((it) => [it.article_id, it.must_qty || 0])),
+    }
+  })
   return { id: ord.id, name: ord.name, vehicleId: ord.vehicle_id, customers }
 }
 
@@ -145,7 +150,7 @@ export async function updateOrder(id, { name, vehicleId, customers }) {
   customers.forEach((c, i) => {
     const cust = custs.find((x) => x.position === i)
     for (const [articleId, qty] of Object.entries(c.qty || {})) {
-      if (qty > 0) items.push({ order_customer_id: cust.id, article_id: articleId, qty })
+      if (qty > 0) items.push({ order_customer_id: cust.id, article_id: articleId, qty, must_qty: Math.min(c.must?.[articleId] || 0, qty) })
     }
   })
   if (items.length) {

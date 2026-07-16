@@ -15,15 +15,21 @@ const PALETTE = ['#e0783f', '#2f7dd1', '#4fa06a', '#b5539c', '#c9a227', '#3fb0b0
 const labelOf = (p, fallback) => (p ? (p.code ? `Heinner ${p.code}` : p.name) : fallback)
 const dimOf = (p) => (p ? `${Math.round(p.l * 100)}×${Math.round(p.w * 100)}×${Math.round(p.h * 100)}cm · ${p.weight}kg${p.canLie ? ' · liježe' : ''}` : null)
 
-// Utovar (blokovi kupaca) → ulaz za packer/spremanje: [{ name, color, qty: { [articleId]: n } }] (samo matchane stavke).
+// Utovar (blokovi kupaca) → ulaz za packer/spremanje:
+// [{ name, color, qty:{[articleId]:n}, must:{[articleId]:n} }] (samo matchane stavke).
+// must = koliko komada MORA u kombi; motor ga za sad ne forsira (čisti podatak, §4/§4c).
 const toPackCustomers = (blocks) =>
-  blocks.map((b) => ({
-    name: b.name,
-    color: b.color,
-    qty: Object.fromEntries(b.items.filter((i) => i.matched && i.qty > 0).map((i) => [i.articleId, i.qty])),
-  }))
+  blocks.map((b) => {
+    const matched = b.items.filter((i) => i.matched && i.qty > 0)
+    return {
+      name: b.name,
+      color: b.color,
+      qty: Object.fromEntries(matched.map((i) => [i.articleId, i.qty])),
+      must: Object.fromEntries(matched.filter((i) => i.mustQty > 0).map((i) => [i.articleId, Math.min(i.mustQty, i.qty)])),
+    }
+  })
 
-// Spremljeni utovar → blokovi (za uređivanje). qty:{articleId:n} + katalog → stavke.
+// Spremljeni utovar → blokovi (za uređivanje). qty/must:{articleId:n} + katalog → stavke.
 const orderToBlocks = (customers, productsById) =>
   customers.map((c, i) => ({
     name: c.name,
@@ -31,7 +37,7 @@ const orderToBlocks = (customers, productsById) =>
     docs: [],
     items: Object.entries(c.qty || {}).map(([articleId, qty]) => {
       const p = productsById[articleId]
-      return { key: `a:${articleId}`, articleId, ean: p?.ean, label: labelOf(p, articleId), dim: dimOf(p), qty, priority: false, matched: !!p }
+      return { key: `a:${articleId}`, articleId, ean: p?.ean, label: labelOf(p, articleId), dim: dimOf(p), qty, mustQty: Math.min(c.must?.[articleId] || 0, qty), matched: !!p }
     }),
   }))
 
@@ -111,7 +117,7 @@ export default function App() {
           else block.items.push({
             key, articleId: it.article?.id || null, ean: it.ean,
             label: labelOf(it.article, it.rawName), dim: dimOf(it.article),
-            qty: it.qty, priority: false, matched: !!it.article,
+            qty: it.qty, mustQty: 0, matched: !!it.article,
           })
         }
       }
@@ -122,12 +128,21 @@ export default function App() {
   }
 
   // ---- uređivanje blokova ----
+  // mustQty je uvijek 0..qty; smanjenje qty automatski klampa "mora".
   const changeQty = (bi, key, d) => setBlocks((prev) => prev.map((b, i) => i !== bi ? b
-    : { ...b, items: b.items.map((it) => it.key !== key ? it : { ...it, qty: Math.max(0, it.qty + d) }) }))
+    : { ...b, items: b.items.map((it) => {
+        if (it.key !== key) return it
+        const qty = Math.max(0, it.qty + d)
+        return { ...it, qty, mustQty: Math.min(it.mustQty, qty) }
+      }) }))
   const removeItem = (bi, key) => setBlocks((prev) => prev.map((b, i) => i !== bi ? b
     : { ...b, items: b.items.filter((it) => it.key !== key) }))
-  const togglePrio = (bi, key) => setBlocks((prev) => prev.map((b, i) => i !== bi ? b
-    : { ...b, items: b.items.map((it) => it.key !== key ? it : { ...it, priority: !it.priority }) }))
+  // ★ = uključi/isključi "mora u kombi": off → svi komadi moraju; on → 0.
+  const toggleMust = (bi, key) => setBlocks((prev) => prev.map((b, i) => i !== bi ? b
+    : { ...b, items: b.items.map((it) => it.key !== key ? it : { ...it, mustQty: it.mustQty > 0 ? 0 : it.qty }) }))
+  // fino podešavanje koliko komada mora (klampano 0..qty)
+  const changeMust = (bi, key, d) => setBlocks((prev) => prev.map((b, i) => i !== bi ? b
+    : { ...b, items: b.items.map((it) => it.key !== key ? it : { ...it, mustQty: Math.max(0, Math.min(it.qty, it.mustQty + d)) }) }))
   const removeCust = (bi) => setBlocks((prev) => prev.filter((_, i) => i !== bi))
 
   // ---- stanja ----
@@ -192,12 +207,21 @@ export default function App() {
                   <button className="link danger" onClick={() => removeCust(bi)}>ukloni</button>
                 </div>
                 {b.items.length === 0 && <div className="cb-none">nema stavki</div>}
-                {[...b.items].sort((a, c) => (c.priority ? 1 : 0) - (a.priority ? 1 : 0)).map((it) => (
-                  <div key={it.key} className={'cb-item' + (it.matched ? '' : ' miss') + (it.priority ? ' prio' : '')}>
-                    <button className={'star' + (it.priority ? ' on' : '')} title="prioritet (mora u kombi)" onClick={() => togglePrio(bi, it.key)}>★</button>
+                {[...b.items].sort((a, c) => (c.mustQty > 0 ? 1 : 0) - (a.mustQty > 0 ? 1 : 0)).map((it) => (
+                  <div key={it.key} className={'cb-item' + (it.matched ? '' : ' miss') + (it.mustQty > 0 ? ' prio' : '')}>
+                    <button className={'star' + (it.mustQty > 0 ? ' on' : '')} title="mora u kombi (uključi/isključi)" onClick={() => toggleMust(bi, it.key)}>★</button>
                     <div className="cb-main">
                       <div className="cb-label">{it.label}{!it.matched && <span className="itag">nije u katalogu</span>}</div>
                       <div className="cb-dim">{it.dim || (it.ean ? `EAN ${it.ean}` : '')}</div>
+                      {it.mustQty > 0 && (
+                        <span className="mustc" title="koliko komada MORA u kombi">
+                          obavezno
+                          <button onClick={() => changeMust(bi, it.key, -1)}>−</button>
+                          <b>{it.mustQty}</b>
+                          <button onClick={() => changeMust(bi, it.key, 1)}>+</button>
+                          / {it.qty}
+                        </span>
+                      )}
                     </div>
                     <span className="mini">
                       <button onClick={() => changeQty(bi, it.key, -1)}>−</button>

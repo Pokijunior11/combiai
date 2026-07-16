@@ -138,6 +138,9 @@ tbody tr { border-bottom: 1px solid #f2f4f8; }
 .itag { margin-left: 6px; font-size: 10px; font-weight: 600; color: #b23c17; background: #fff0eb; border-radius: 5px; padding: 1px 5px; vertical-align: middle; }
 .star { flex: none; width: 22px; height: 22px; border: 1px solid #d2d8e2; background: #f6f8fb; border-radius: 6px; color: #c4ccd8; font-size: 13px; line-height: 1; cursor: pointer; }
 .star.on { background: #ffd24d; border-color: #e6b52e; color: #7a5a00; }
+.mustc { display: inline-flex; align-items: center; gap: 4px; margin-top: 3px; font-size: 11px; color: #7a5a00; }
+.mustc button { width: 18px; height: 18px; border: 1px solid #e6b52e; background: #fff7db; border-radius: 5px; font-size: 12px; line-height: 1; cursor: pointer; color: #7a5a00; }
+.mustc b { font-variant-numeric: tabular-nums; min-width: 10px; text-align: center; }
 .cb-del { flex: none; width: 22px; height: 22px; border: 1px solid #ecd6d0; background: #fff6f3; border-radius: 6px; color: #c0653f; font-size: 12px; line-height: 1; cursor: pointer; }
 .cb-del:active { background: #fbe7df; }
 .link.danger { color: #c0392b; }

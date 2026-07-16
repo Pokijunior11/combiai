@@ -40,23 +40,32 @@ Poanta: kontekst se drži u `.md` fajlovima (ne u glavi/sesiji), svaki korak je 
   daljnjeg tuniranja motora → evaluacija temelja** (vidi §4, „Reset motora"). Ne štelati aparate
   slučaj-po-slučaj. Odluka o temelju je **korisnikova**; čeka zeleno svjetlo.
 - **Ostaje i: F6** — sitna dorada (rubna stanja, mobilni QA, možda auto-osvježavanje popisa). Login nije potreban (nema ga — zajednički pristup).
-- **Ostaje (Kriška 2 rep):** prioritet u packeru (sad samo vizualno), perzistencija prioriteta/nematchanih
-  (DB `order_item` nema kolone → sprema se samo matchano), ručni „dodaj artikl" bez otpremnice.
+- **Prioritet DIO 1 GOTOVO** ✅ (2026-07-16, potvrđeno na localhostu) — „mora u kombi" + KOLIČINA po
+  stavci, **samo UI + perzistencija** (packer NE dira). Kolona `order_item.must_qty`
+  (migracija `supabase/f7_must_qty.sql`); `db.js` sprema/učita; `App.jsx` ★ = uključi/isključi „mora"
+  (default svi komadi) + stepper „mora N / qty", smanjenje qty klampa must, obavezne na vrh. DoD (od 5
+  mora 3 → spremi → reopen → očuvano) prošao.
+- **Ostaje (Kriška 2 rep):** perzistencija **nematchanih** stavki (DB sprema samo matchano), ručni
+  „dodaj artikl" bez otpremnice, editiranje naziva kupca.
 - **Stack:** Vite + React + react-three-fiber · Supabase · Vercel. Odluke: npm, JavaScript, app u `app/`.
 
-### 👉 SLJEDEĆI MICRO-KORAK (za iduću sesiju)
-**Prioritet po artiklu = „mora u kombi" + KOLIČINA — samo UI + perzistencija. NE dirati packer.**
-- **Zašto:** prioritet ima 2 polovice. (1) *uhvati i spremi* što mora i koliko komada = čist podatak,
-  neovisan o motoru, i točno je ulaz koji budući motor treba. (2) *motor to forsira* = čeka odluku o
-  motoru (§4 „Reset motora", pauzirano). Radimo SAMO (1) sad; (2) dolazi s odlukom o temelju.
-- **Opseg (jedan mali korak):**
-  - DB: dodati kolonu na `order_item` za obaveznu količinu (npr. `must_qty` int, default 0;
-    0 = nije obavezno). Provjeriti postojeći `order_item` (§ tehnički mapping, `db.js`).
-  - UI (editor otpremnice): po artiklu unos „mora u kombi + koliko komada" (0..qty), vizualno jasno.
-  - Perzistencija: spremi/učitaj `must_qty` uz utovar. (Nematchane stavke = i dalje zaseban dug, ne sad.)
-- **DoD:** kolegica označi da od 5 kom mora 3 → spremi utovar → ponovno otvori → stanje očuvano.
-  Packer se ne mijenja (za sad prioritet ostaje vizualno/sortiranje kao i dosad).
-- **Ne raditi u ovom koraku:** forsiranje u packeru, barkod, redoslijed pod→strop (to su odvojene §4d stavke).
+### 👉 SLJEDEĆI MICRO-KORAK (za iduću sesiju) — Prioritet DIO 2: MOTOR FORSIRA „mora"
+**Live: čim planer označi ★ „mora", app izbaci najmanje bitne NEOBAVEZNE komade da obavezni stanu.**
+- **Kontekst:** dio 1 (uhvati+spremi „mora + količina") je gotov (gore). Dio 2 = motor to **forsira**.
+  Korisnik to izričito traži („da izbaci druge stvari po svom izračunu da bitne stanu, live").
+- **DOGOVORENI PRISTUP (2026-07-16) — sloj odabira IZNAD packera (packer = crna kutija, heuristike se
+  NE diraju → whack-a-mole ostaje zatvoren):**
+  1. Podijeli stavke na MORA (`must_qty`) i NEOBAVEZNO.
+  2. Pokreni `computeBest`. Ako sva MORA stanu → prikaži plan (višak neobaveznog = „nije stalo").
+  3. Ako neko MORA ne stane → **izbaci najmanje bitne NEOBAVEZNE** komade i ponovno `computeBest`
+     (packer sam presloži), dok sva MORA ne stanu (težina **i** prostor).
+  4. Jasno prikaži što je izbačeno da bi obavezno stalo. Ako ni sama MORA ne stanu → iskreno
+     „ne stane ni obavezno" (planer mora smanjiti).
+- **DoD:** označim par aparata „mora", dodam višak neobaveznog preko kapaciteta → app automatski izbaci
+  neobavezno tako da sva „mora" stanu, i napiše što je izbacio. Reaktivno (bez gumba).
+- **Napomena:** ovo je taj parkirani „(2) motor forsira" korak iz §4/§4c/§4d. Pristup gore ga radi BEZ
+  ponovnog otvaranja §4 „Reset motora" (ne mijenja logiku slaganja, samo ODABIR što ulazi).
+- **Ne raditi u ovom koraku:** mijenjati heuristike u `packer.js`, barkod, redoslijed pod→strop.
 
 ---
 
@@ -261,7 +270,7 @@ slučajevi = zaseban track (Kolosijek B), nakon eksplicitnih pravila po artiklu.
 1. ✅ „Planiraj novi utovar" tipka.
 2. ✅ „Uvezi otpremnicu" → dolje se pojavi **kupac + broj otpremnice + stavke**.
 3. ✅ Druga otpremnica **istog kupca** → grupira pod isti kupac; vidljivi **svi brojevi otpremnica** (Kriška 2).
-4. ⏳ **PROFINJENJE prioriteta:** po artiklu ne samo ✔ „mora", nego **„mora u kombi" + KOLIČINA** koja mora (npr. 3 od 5, kad je kupcu hitno). Trenutačno je ★ samo vizualno/sortiranje (vidi §4c „ostaje: prioritet u packer").
+4. ✅/⏳ **PROFINJENJE prioriteta:** po artiklu **„mora u kombi" + KOLIČINA** koja mora (npr. 3 od 5). **DIO 1 (UI+perzistencija) ✅** — ★ + stepper „mora N/qty", sprema se u `must_qty`. **DIO 2 (motor forsira) ⏳** — sloj odabira iznad packera (vidi „SLJEDEĆI MICRO-KORAK" §0).
 5. ✅/⏳ **Uz bok se ODMAH** računa najbolji utovar + **stane/ne-stane** (reaktivno već postoji; kvaliteta = §4 „Reset motora").
 6. ✅ „Spremi utovar" → gotovo. Nove otpremnice kolegica radi sama izvan app-a.
 
@@ -321,4 +330,5 @@ slučajevi = zaseban track (Kolosijek B), nakon eksplicitnih pravila po artiklu.
 - **2026-07-15** Kriška 1: Heinner MDA katalog uvezen (364 art., brutto dim + EAN + kategorija). Metodologija §4c (atributi po artiklu + pravila + bench-testovi) usvojena.
 - **2026-07-16** Kriška 2 GOTOVA: uvoz Synesis otpremnica (SheetJS, match po EAN), akumulativni editor (1 otpremnica=1 kupac, broj otpremnice, ±/makni/★prioritet).
 - **2026-07-16** 🛑 RESET MOTORA SLAGANJA: prekid s ručnim tuniranjem heuristika. Odluka — prije daljnjeg rada evaluirati gotove temelje (container-loading solver/API s multi-drop, ili OR-Tools) vs. postojeći `packer.js` na pravim otpremnicama; korisnik bira temelj. Detalji §4 „Reset motora". Pauzirano na korisnikov zahtjev.
+- **2026-07-16** Prioritet DIO 1 GOTOVO: „mora u kombi" + KOLIČINA po stavci (UI + perzistencija, packer ne dira). Kolona `order_item.must_qty` (`supabase/f7_must_qty.sql`), `db.js` save/load, `App.jsx` ★+stepper. Potvrđeno na localhostu. DIO 2 (motor forsira „mora") = idući korak; dogovoren pristup = sloj odabira iznad packera (crna kutija, bez diranja heuristika → ne otvara §4 Reset).
 - **2026-07-16** Snimljen KAO-JEST proces kolegice (§1b) kao temelj zahtjeva. Ključni uvid: danas se provjerava samo težina, ne prostor → app zatvara tu rupu (težina + 3D zajedno). Odluke: (1) preljev = app javi višak, čovjek ručno odlučuje → V1 jedan kombi, bez auto-vozila/ruta; (2) istovar = i jedan i više kupaca → engine mora podržati multi-drop LIFO. Katalog za engine ≠ svi aparati: motor je geometrija+pravila, treba pokriti rubne SLUČAJEVE (visok/plosnat/težak/liježe/krhko/par), ne cijeli katalog; puni katalog treba samo za matching otpremnica.
