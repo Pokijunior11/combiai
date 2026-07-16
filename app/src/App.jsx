@@ -28,6 +28,7 @@ const orderToBlocks = (customers, productsById) =>
   customers.map((c, i) => ({
     name: c.name,
     color: c.color || PALETTE[i % PALETTE.length],
+    docs: [],
     items: Object.entries(c.qty || {}).map(([articleId, qty]) => {
       const p = productsById[articleId]
       return { key: `a:${articleId}`, articleId, ean: p?.ean, label: labelOf(p, articleId), dim: dimOf(p), qty, priority: false, matched: !!p }
@@ -96,11 +97,13 @@ export default function App() {
 
   // ---- uvoz otpremnice: akumuliraj po kupcu (isti naziv → dopuni stavke) ----
   const onImport = (matched, fileName) => {
+    const docNos = String(matched.docNo || '').split(',').map((s) => s.trim()).filter(Boolean)
     setBlocks((prev) => {
-      const next = prev.map((b) => ({ ...b, items: b.items.map((i) => ({ ...i })) }))
+      const next = prev.map((b) => ({ ...b, docs: [...b.docs], items: b.items.map((i) => ({ ...i })) }))
       for (const c of matched.customers) {
         let block = next.find((b) => b.name === c.name)
-        if (!block) { block = { name: c.name, color: PALETTE[next.length % PALETTE.length], items: [] }; next.push(block) }
+        if (!block) { block = { name: c.name, color: PALETTE[next.length % PALETTE.length], docs: [], items: [] }; next.push(block) }
+        for (const d of docNos) if (!block.docs.includes(d)) block.docs.push(d)
         for (const it of c.items) {
           const key = it.article ? `a:${it.article.id}` : `e:${it.ean || it.rawName}`
           const existing = block.items.find((x) => x.key === key)
@@ -185,6 +188,7 @@ export default function App() {
                 <div className="cb-head">
                   <span className="dot" style={{ background: b.color }} />
                   <span className="cb-name">{bi + 1}. {b.name}</span>
+                  {b.docs.length > 0 && <span className="cb-doc" title="broj otpremnice">otpr. {b.docs.join(', ')}</span>}
                   <button className="link danger" onClick={() => removeCust(bi)}>ukloni</button>
                 </div>
                 {b.items.length === 0 && <div className="cb-none">nema stavki</div>}
