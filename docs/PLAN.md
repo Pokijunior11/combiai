@@ -18,8 +18,17 @@
   - Podatkovni model: koriste se `orders`/`order_customer`/`order_item` (tablica `plan` iz f4 sad se NE koristi — može ostati prazna).
   - Novi/refaktorirani: HomeList, UtovarView, VanStage, ResultPanel; App presložen; obrisani OrdersList/PlansList/PlanView.
 - **F3/F4/F5 objedinjeni u „Utovar" tok** ✅ **POTVRĐENO od korisnika** („to je upravo to što sam htio").
-- **VELIKI SLJEDEĆI KORAK: Kolosijek B — motor slaganja.** Korisnik naglašava da je to srce aplikacije i da ima najviše popravaka (vidi `issue.txt`). Zaslužuje vlastiti ciklus (grillanje + testovi). Prije toga: korisnik skuplja konkretne primjere (koja roba/kupci → što je krivo).
+- **Kriška 2 — UVOZ OTPREMNICA GOTOV** ✅ (2026-07-16). Akumulativni editor: **1 otpremnica = 1 kupac**,
+  više uploada se slaže po kupcu (isti naziv → dopuni; nova → novi blok), prikaz **broja otpremnice**,
+  ±količina / ✕ makni / ★ prioritet, nematchani artikli crveno. SheetJS parser + match po EAN. Detalji §4c.
+- 🛑 **VELIKI SLJEDEĆI KORAK — RESET MOTORA SLAGANJA (odluka 2026-07-16).** Korisnik: „htio sam gotov 3D
+  bin packing da najbolje utovari kombi, a ne da ručno okrećemo pojedine aparate." Whack-a-mole na
+  postojećem `packer.js` (~430 lin. ručnih heuristika) = **znak krivog temelja**. **PRIJE bilo kakvog
+  daljnjeg tuniranja motora → evaluacija temelja** (vidi §4, „Reset motora"). Ne štelati aparate
+  slučaj-po-slučaj. Odluka o temelju je **korisnikova**; čeka zeleno svjetlo.
 - **Ostaje i: F6** — sitna dorada (rubna stanja, mobilni QA, možda auto-osvježavanje popisa). Login nije potreban (nema ga — zajednički pristup).
+- **Ostaje (Kriška 2 rep):** prioritet u packeru (sad samo vizualno), perzistencija prioriteta/nematchanih
+  (DB `order_item` nema kolone → sprema se samo matchano), ručni „dodaj artikl" bez otpremnice.
 - **Stack:** Vite + React + react-three-fiber · Supabase · Vercel. Odluke: npm, JavaScript, app u `app/`.
 
 ---
@@ -65,7 +74,29 @@ Otvorena pitanja (rješavamo jedno po jedno, svako s preporukom):
 ---
 
 ## 4. Kolosijek B — dubina logike slaganja (trajni backlog, ne blokira A)
-Poznata dugovanja (iz `issue.txt` i dogovora):
+
+### 🛑 RESET MOTORA — odluka o temelju prije daljnjeg rada (2026-07-16)
+**Kontekst:** kroz sesije se motor gradio kao **gomila ručnih heuristika** (topper/filer/domaćin,
+containment, 16 strategija; `app/src/lib/packer.js` ~430 lin.). Rezultat: „malo dobro pa nije pa je" u
+krug — svaki popravak negdje pomrda drugo. Korisnik (opravdano) stao: **htio je gotov 3D bin packing,
+najbolje utovariti kombi, ne ručno okretati pojedine aparate.**
+
+**Ključni uvid — zašto je bilo teško:** generički 3D bin-packing (npm paketi) maksimizira POPUNJENOST,
+ali ne zna dva nepregovaralna pravila ove domene: **(1) LIFO istovar po kupcu (multi-drop)**,
+**(2) nosivost/oslonac/slaganje**. Ta pravila „ne dolaze besplatno" → zato je nastala ručna gomila.
+Pravi naziv problema: **container loading s multi-drop (LIFO) + weight/stability constraints** (teže,
+specijalizirano — NE običan bin packing).
+
+**Plan (kad korisnik da zeleno) — vremenski ograničen spike, pa ODLUKA o temelju:**
+1. **Real bench PRVO** — `tools/` skripta koja pušta motor na **prave otpremnice** (`Otpremnica-*.xls`)
+   i mjeri: popunjenost, mrtvi podni džepovi (rupe), poštivanje LIFO-a, valjanost. (Metodologija §4c korak 3.)
+2. **Usporedi 2–3 temelja** na istim podacima:
+   - (a) specijalizirani **container-loading solver/API** s multi-drop + težinom (gotovo, bez našeg održavanja),
+   - (b) **constrained optimizer** (npr. OR-Tools CP-SAT — pravila deklarativno),
+   - (c) postojeći `packer.js` (baseline).
+3. **Korisnik bira temelj** → tek onda dalje. **NE** nastavljati case-by-case tuning postojećeg motora.
+
+**Poznata dugovanja** (iz `issue.txt` i dogovora):
 - [ ] Orijentacija polegnutog hladnjaka: uspravljanje mora biti ravnopravna opcija kad se tako bolje puni (npr. sušilica gore), ne fiksno 4 u vis.
 - [ ] Prerukavanje pri istovaru — trenutačno se izbjegava; razraditi kad je nužno.
 - [ ] Težište / raspodjela po osovinama (stabilnost vožnje).
@@ -216,3 +247,6 @@ slučajevi = zaseban track (Kolosijek B), nakon eksplicitnih pravila po artiklu.
 - **2026-07-10** P6: V1 bez vidljive prijave — jedan zajednički račun, auto-sesija, bez uloga. Prioritet: radnik ne smije zapeti na loginu.
 - **2026-07-10** P7: stack = Vite + React + react-three-fiber; baza Supabase; hosting Vercel (auto-deploy iz GitHuba).
 - **2026-07-10** P8: V1 opseg definiran (katalog + 1 kombi + narudžba + izračun + spremanje + otvaranje na mobitelu). Vozila: jedan kombi. Katalog: ručno seedanje. → Fazni plan (sekcija 5) složen, planiranje gotovo.
+- **2026-07-15** Kriška 1: Heinner MDA katalog uvezen (364 art., brutto dim + EAN + kategorija). Metodologija §4c (atributi po artiklu + pravila + bench-testovi) usvojena.
+- **2026-07-16** Kriška 2 GOTOVA: uvoz Synesis otpremnica (SheetJS, match po EAN), akumulativni editor (1 otpremnica=1 kupac, broj otpremnice, ±/makni/★prioritet).
+- **2026-07-16** 🛑 RESET MOTORA SLAGANJA: prekid s ručnim tuniranjem heuristika. Odluka — prije daljnjeg rada evaluirati gotove temelje (container-loading solver/API s multi-drop, ili OR-Tools) vs. postojeći `packer.js` na pravim otpremnicama; korisnik bira temelj. Detalji §4 „Reset motora". Pauzirano na korisnikov zahtjev.
