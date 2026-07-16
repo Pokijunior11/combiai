@@ -5,6 +5,19 @@
 
 ---
 
+## Način rada po sesiji (korisnikov dogovoreni ritam) — POŠTUJ OVO
+Jedna sesija = jedan mali, zaokružen zadatak. Ciklus:
+1. **Početak sesije** (nova ili nakon `/clear`): pročitaj `.md` fajlove koje trebaš — `CLAUDE.md`, ovaj `PLAN.md`, relevantni spec (npr. `docs/ENGINE.md`) — da uhvatiš kontekst i zatečeni status.
+2. **Micro-stepping**: implementiraj **jedan mali zadatak, korak po korak** (ne hrpu odjednom).
+3. **Testiranje**: provjeri da radi (npr. `node tools/packer-bench.mjs`, app, ili ručna provjera — što god odgovara zadatku).
+4. **Ažuriraj dokumentaciju**: zapiši napredak + kontekst u `PLAN.md` (i druge `.md` po potrebi) da iduća sesija zna gdje smo stali.
+5. **Git commit** — **tek nakon što korisnik potvrdi da je istestirao** (ne prije).
+6. **Clear sesije** → sve ispočetka za idući zadatak.
+
+Poanta: kontekst se drži u `.md` fajlovima (ne u glavi/sesiji), svaki korak je mali i provjeren, commit je čista kontrolna točka. Vidi i „Kako radimo" u `CLAUDE.md`.
+
+---
+
 ## 0. Trenutni status / sljedeći korak
 - **F0 GOTOVO** ✅ Živi URL: **https://combiai.vercel.app/** (auto-deploy na `git push`). Kod na `github.com/Pokijunior11/combiai` (main, račun Pokijunior11).
 - **F1 GOTOVO** ✅ (commit `d9e185e`): demo prenesen u React. Packer node-testiran (parity).
