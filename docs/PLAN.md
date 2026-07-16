@@ -44,10 +44,43 @@ Poanta: kontekst se drži u `.md` fajlovima (ne u glavi/sesiji), svaki korak je 
   (DB `order_item` nema kolone → sprema se samo matchano), ručni „dodaj artikl" bez otpremnice.
 - **Stack:** Vite + React + react-three-fiber · Supabase · Vercel. Odluke: npm, JavaScript, app u `app/`.
 
+### 👉 SLJEDEĆI MICRO-KORAK (za iduću sesiju)
+**Prioritet po artiklu = „mora u kombi" + KOLIČINA — samo UI + perzistencija. NE dirati packer.**
+- **Zašto:** prioritet ima 2 polovice. (1) *uhvati i spremi* što mora i koliko komada = čist podatak,
+  neovisan o motoru, i točno je ulaz koji budući motor treba. (2) *motor to forsira* = čeka odluku o
+  motoru (§4 „Reset motora", pauzirano). Radimo SAMO (1) sad; (2) dolazi s odlukom o temelju.
+- **Opseg (jedan mali korak):**
+  - DB: dodati kolonu na `order_item` za obaveznu količinu (npr. `must_qty` int, default 0;
+    0 = nije obavezno). Provjeriti postojeći `order_item` (§ tehnički mapping, `db.js`).
+  - UI (editor otpremnice): po artiklu unos „mora u kombi + koliko komada" (0..qty), vizualno jasno.
+  - Perzistencija: spremi/učitaj `must_qty` uz utovar. (Nematchane stavke = i dalje zaseban dug, ne sad.)
+- **DoD:** kolegica označi da od 5 kom mora 3 → spremi utovar → ponovno otvori → stanje očuvano.
+  Packer se ne mijenja (za sad prioritet ostaje vizualno/sortiranje kao i dosad).
+- **Ne raditi u ovom koraku:** forsiranje u packeru, barkod, redoslijed pod→strop (to su odvojene §4d stavke).
+
 ---
 
 ## 1. Vizija
 Računalo brže i bolje od čovjeka složi plan utovara kombija (bijela tehnika), poštujući nosivost i redoslijed istovara, i prikaže ga u 3D-u. Cilj demoa bio je to dokazati — dokazano i validirano.
+
+---
+
+## 1b. Kako kolegica radi DANAS (kao-jest) — temelj zahtjeva (2026-07-16)
+> Snimljeno iz razgovora s korisnikom. Ovo je izvor zahtjeva za UI i za pravila enginea. Ne mijenjati napamet — samo dopunjavati kad se sazna više iz prakse.
+
+**Postojeći proces (ručno):**
+1. Narudžbe dođu — svejedno je li **jedan kupac (velika ili više manjih/većih narudžbi)** ili **više kupaca**.
+2. Kolegica **zbraja težine** aparata dok ne dođe do **nosivosti** kombija → tu stane.
+3. Skladištarima da popis → oni **nađu, pripreme i utovare**.
+4. **Bolna točka:** često **ne stane prostorno** (ili stane pa se naknadno dodaje) → **tu nastaju greške.**
+
+**Ključni uvid (prava vrijednost aplikacije):** kolegica danas provjerava **samo TEŽINU** — to je jedino što može izračunati unaprijed. **Hoće li stvari stati PROSTORNO ne zna** dok skladištari fizički ne slože, i tu puca. **Aplikacija zatvara tu rupu: provjerava težinu I 3D prostor zajedno, PRIJE utovara.** Zato je engine srce proizvoda, ne kozmetika.
+
+**V1 cilj (korisnikovim riječima):** kolegica u app ubaci **sve narudžbe** (isti tok kao sad), **označi što MORA stati**, dobije jasno **stane / ne stane** (težina + prostor), i istovremeno **najbolji mogući plan utovara**.
+
+**Razjašnjeno (odluke 2026-07-16):**
+- **Preljev (što ne stane):** app samo javi **stane/ne-stane + što je višak**; **kolegica ručno odluči** što izbaciti/odgoditi. → V1 = **jedan kombi**, BEZ auto-biranja drugog vozila ni dijeljenja na rute.
+- **Istovar:** **oboje, ovisi o danu** — nekad jedan kupac, nekad više kupaca redom. Engine **mora podržati LIFO/multi-drop** kad je više kupaca (zadnji kupac do vrata), i raditi kad je jedan (LIFO neaktivan). → potvrđuje da je multi-drop LIFO stvarno, nepregovaralno pravilo (veže se na §4 „Reset motora").
 
 ---
 
@@ -219,6 +252,31 @@ slučajevi = zaseban track (Kolosijek B), nakon eksplicitnih pravila po artiklu.
 
 ---
 
+## 4d. Ciljni UI tok (iz §1b, snimljeno 2026-07-16) — UI backlog
+> Kako korisnik zamišlja tok. „✅ imamo" = već radi; „⏳" = treba doraditi/dodati. Vadimo stavku po stavku (micro-stepping), ne sve odjednom.
+
+**Načelo:** „app javi stane/ne-stane" = app je **već fizički složila** kako stane. Odgovor = plan, nema odvojenog koraka.
+
+**PLANER — kolegičin „playground" (živi izračun uz bok):**
+1. ✅ „Planiraj novi utovar" tipka.
+2. ✅ „Uvezi otpremnicu" → dolje se pojavi **kupac + broj otpremnice + stavke**.
+3. ✅ Druga otpremnica **istog kupca** → grupira pod isti kupac; vidljivi **svi brojevi otpremnica** (Kriška 2).
+4. ⏳ **PROFINJENJE prioriteta:** po artiklu ne samo ✔ „mora", nego **„mora u kombi" + KOLIČINA** koja mora (npr. 3 od 5, kad je kupcu hitno). Trenutačno je ★ samo vizualno/sortiranje (vidi §4c „ostaje: prioritet u packer").
+5. ✅/⏳ **Uz bok se ODMAH** računa najbolji utovar + **stane/ne-stane** (reaktivno već postoji; kvaliteta = §4 „Reset motora").
+6. ✅ „Spremi utovar" → gotovo. Nove otpremnice kolegica radi sama izvan app-a.
+
+**SKLADIŠTAR — upute korak po korak:**
+- ✅ Otvori spremljeni utovar → read-only upute (3D + koraci + istovar).
+- ⏳ Svaki korak prikaže: **naziv, šifra, BARKOD** (novo — katalog ima `ean` → iscrtati barkod), i **mjesto u kombiju**.
+- ⏳ **Redoslijed koraka:** od **kabine prema vratima**, i **od poda prema stropu** (logičan slijed utovara). Izvor: `issue.txt` („po redu od kabine do vrata, ali od odozdo prema gore").
+
+**Otvorena profinjenja (iz ovog toka):**
+- [ ] Prioritet = „mora u kombi" + količina (ne boolean) → i vizualno i **u packeru** (motor to forsira; veže se na §4/§4c).
+- [ ] Barkod u uputama skladištaru (render iz `ean`).
+- [ ] Redoslijed koraka pod→strop uz kabina→vrata (provjeriti da ga trenutni prikaz poštuje).
+
+---
+
 ## 5. Fazni plan (V1)
 > Minimalno-prvo. Svaka faza: **cilj → gotovo kad (definition of done) → commit**. Radi se jedna po jedna.
 > „👤 Ti" = zadaci koje korisnik mora napraviti (računi, ključevi). „🤖 Ja" = kod/postavljanje.
@@ -263,3 +321,4 @@ slučajevi = zaseban track (Kolosijek B), nakon eksplicitnih pravila po artiklu.
 - **2026-07-15** Kriška 1: Heinner MDA katalog uvezen (364 art., brutto dim + EAN + kategorija). Metodologija §4c (atributi po artiklu + pravila + bench-testovi) usvojena.
 - **2026-07-16** Kriška 2 GOTOVA: uvoz Synesis otpremnica (SheetJS, match po EAN), akumulativni editor (1 otpremnica=1 kupac, broj otpremnice, ±/makni/★prioritet).
 - **2026-07-16** 🛑 RESET MOTORA SLAGANJA: prekid s ručnim tuniranjem heuristika. Odluka — prije daljnjeg rada evaluirati gotove temelje (container-loading solver/API s multi-drop, ili OR-Tools) vs. postojeći `packer.js` na pravim otpremnicama; korisnik bira temelj. Detalji §4 „Reset motora". Pauzirano na korisnikov zahtjev.
+- **2026-07-16** Snimljen KAO-JEST proces kolegice (§1b) kao temelj zahtjeva. Ključni uvid: danas se provjerava samo težina, ne prostor → app zatvara tu rupu (težina + 3D zajedno). Odluke: (1) preljev = app javi višak, čovjek ručno odlučuje → V1 jedan kombi, bez auto-vozila/ruta; (2) istovar = i jedan i više kupaca → engine mora podržati multi-drop LIFO. Katalog za engine ≠ svi aparati: motor je geometrija+pravila, treba pokriti rubne SLUČAJEVE (visok/plosnat/težak/liježe/krhko/par), ne cijeli katalog; puni katalog treba samo za matching otpremnica.
