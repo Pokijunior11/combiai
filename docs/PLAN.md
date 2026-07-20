@@ -171,6 +171,43 @@ ali ne zna dva nepregovaralna pravila ove domene: **(1) LIFO istovar po kupcu (m
 Pravi naziv problema: **container loading s multi-drop (LIFO) + weight/stability constraints** (teže,
 specijalizirano — NE običan bin packing).
 
+### 📊 KORAK 1 GOTOV — MJERENJE (2026-07-20), `tools/real-bench.mjs`
+Pokretanje: `cd app && node ../tools/real-bench.mjs` (katalog iz Supabasea, testne otpremnice iz repoa).
+Mjeri: popunjenost, masu, pokrivenost poda, **najveći mrtvi džep**, LIFO pomicanja, valjanost,
+teoretski maksimum i **PROPUŠTENO** (koliko bi se JOŠ moglo dodati unutar preostale nosivosti).
+
+| scenarij | popunj. | masa% | pomic. | neutov. | propušteno |
+|---|---|---|---|---|---|
+| 1 kupac (Frigo) | 27.6 | 36 | 0 | 0 | 0 |
+| 1 kupac (DomPlus) | 36.3 | 38 | 0 | 0 | 0 |
+| 1 kupac, 2 otpremnice (Split 1+2) | 20.1 | 39 | 0 | 0 | 0 |
+| 2 kupca | 38.8 | 54 | 0 | 0 | 0 |
+| 3 kupca | 58.8 | 82 | 0 | 1 | **1** |
+| 4 kupca | 59.7 | 92 | 1 | 8 | **1** |
+
+**Nalazi:**
+1. ✅ **Nema kršenja tvrdih pravila** — svi rasporedi valjani, LIFO pomicanja 0 (jednom 1). Motor NIJE
+   pokvaren u smislu pravila; ono što radi, radi ispravno.
+2. 🔴 **Pravi kvar = FRAGMENTACIJA slobodnog prostora.** Scenarij „3 kupca": sve BI teoretski stalo
+   (66% prostora, 90% nosivosti), a motor ipak izostavi **Side-by-Side hladnjak 73×97×199 cm / 116 kg**
+   (ne liježe) pri 58.8% popunjenosti i **256 kg slobodne nosivosti**. Pod je pokriven 80.4% → ~1,57 m²
+   je slobodno, ali **najveći slobodni pravokutnik je 3,25 × 0,15 m** — trake preuske za bilo što.
+   Prostor postoji, samo je razmrvljen. To je klasičan simptom greedy/extreme-points pristupa.
+3. ⚖️ **Dobitak od boljeg motora je ovdje MALEN: 2 komada kroz 6 scenarija.** Prva verzija mjerila je
+   pokazivala 9 — griješila je jer je brojala svaki komad koji *pojedinačno* stane po težini, a svi
+   zajedno probiju nosivost. Ispravljeno na pohlepno-od-najlakšeg.
+
+**⚠️ ZAŠTO OVO JOŠ NE ODLUČUJE — dva ozbiljna ograničenja mjerenja:**
+- **Testne otpremnice su SINTETIČKE** — generirao ih je `tools/make_test_otpremnice.mjs` s ciljem
+  „realna kilaža do ~1400 kg". Dakle to što masa udara u strop pri ~59% prostora može biti **posljedica
+  načina na koji sam ih složio**, a ne stvarnost.
+- **Kombi je PLACEHOLDER** (4,0 × 2,0 × 2,30 m, 1400 kg — iz demoa). Prave dimenzije i nosivost mijenjaju
+  cijelu sliku: ako je nosivost manja, težina veže još ranije i bolji motor vrijedi još manje; ako je
+  veća, prostor postaje usko grlo i motor vrijedi više.
+- **Napetost sa stvarnošću:** mjerenje kaže da težina veže prije prostora (82-92% mase pri ~59% prostora),
+  a §1b kaže da kolegici u praksi **„često ne stane prostorno"**. To se ne slaže → znak da sintetički
+  podaci ne opisuju prave narudžbe. **Treba pravi profil narudžbe + prave podatke kombija prije odluke.**
+
 **Plan (kad korisnik da zeleno) — vremenski ograničen spike, pa ODLUKA o temelju:**
 1. **Real bench PRVO** — `tools/` skripta koja pušta motor na **prave otpremnice** (`Otpremnica-*.xls`)
    i mjeri: popunjenost, mrtvi podni džepovi (rupe), poštivanje LIFO-a, valjanost. (Metodologija §4c korak 3.)
