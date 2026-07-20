@@ -3,6 +3,77 @@
 > Cilj: složiti robu tako da **što više stane** i da je **fizički ispravno/stabilno**, uz poštovanje istovara (LIFO).
 > Pristup: **Pravilnik → Mjerilo → Test-scenariji → Iteracija algoritma** (svaka promjena se mjeri).
 
+---
+# 🎯 POČNI OVDJE — GRILL ZA MOTOR (pripremljeno 2026-07-20)
+> Korisnik namjerno radi `/clear` i traži **novi grill baš za motor**, jer je to najveći problem.
+> Ovo je brifing za tu sesiju. Sve ispod („STATUS", pravilnik, doradе) je povijest — pročitaj je,
+> ali **odluke se donose ovdje**. Korisnikov cilj doslovno: *„moram taj engine složiti da radi bolje
+> od ljudi, jer će utovar biti bolji i brži, a skladištari i kolegica neće morati razmišljati."*
+
+## Gdje se motor uklapa u stvarni proces (razjašnjeno 2026-07-20)
+1. Kolegica unese otpremnice → **program javi stane li po KILAŽI** (kazne za pretovar su razlog zašto
+   ona danas gleda samo težinu). Ako ne stane → ona ručno makne stavke.
+2. **Paralelno** program izračuna **najbolji mogući utovar** (max load) — puno aparata različitih
+   dimenzija, uz naša pravila.
+> Dakle: težinska provjera je *njezina* petlja, a max-load je *naš* posao. To dvoje nije isti korak.
+
+## Što je mjerenje pokazalo (2026-07-20, `tools/real-bench.mjs`)
+- ✅ **Motor pravila poštuje ispravno** — svi rasporedi valjani, LIFO pomicanja 0 (jednom 1).
+  Nije pokvaren na pravilima.
+- 🔴 **Kvar = FRAGMENTACIJA slobodnog prostora.** Scenarij „3 kupca": sve BI teoretski stalo
+  (66% prostora, 90% nosivosti), a motor izostavi Side-by-Side **73×97×199 cm / 116 kg** (ne liježe)
+  pri **58,8% popunjenosti** i 256 kg slobodne nosivosti. Pod pokriven 80,4% → ~1,57 m² slobodno,
+  ali **najveći slobodni pravokutnik 3,25 × 0,15 m** — trake preuske za bilo što.
+- 📉 **Izmjereni dobitak boljeg motora: 2 komada kroz 6 scenarija.** MALO — ali na **sintetičkim**
+  otpremnicama i **placeholder** kombiju (4×2×2,30 m, 1400 kg), pa magnitudi NE vjerovati.
+- 🧭 **Dijagnoza:** motor radi JEDAN pohlepni prolaz kroz 16 fiksnih strategija i stane. Ne postoji
+  pravo **traženje** koje bi presložilo da se slobodan prostor spoji. Instance su sitne (**max 35
+  komada**) → traženje je itekako priuštivo.
+
+## Odabir temelja — što je već provjereno (ne ponavljati)
+- **3dbinpacking.com** (korisnik ga je linkao kao uzor): „Check Max Load" računa koliko komada
+  **jedne vrste** stane. Njihov API ima `max_wg`, `vr` (rotacija), `group`, `separate` — ali
+  **NEMA LIFO/multi-drop ni nosivost-po-artiklu**. → sam po sebi ne može naša pravila.
+- **3dpack.ing** — konkurent, tvrdi da ima LIFO/FIFO i redoslijed dostave. Jedini „gotov" kandidat,
+  tvrdnja NIJE provjerena. Protiv: plaća se, podaci kupaca idu van, ovisnost.
+- **OR-Tools CP-SAT** — pravila deklarativno, vrlo jak; ali Python → traži backend (stack je JS u pregledniku).
+- **Preporuka asistenta (nije odluka):** zadržati provjeru pravila iz `packer.js` (mjerenjem dokazano
+  da radi) i zamijeniti **sloj odlučivanja** — greedy + ručne heuristike — pravim traženjem. Ostaje
+  u pregledniku, bez vendora i backenda. Bacaju se heuristike (topper/filer/domaćin) koje su i
+  uzrokovale „popraviš jedno, pomrda drugo".
+
+## ❓ PITANJA ZA GRILL (redom po tome koliko mijenjaju ishod)
+1. **Je li „kriška po kupcu" (contiguous pojas, §1.6) stvarno nužna?** Ovo je najsumnjivije mjesto.
+   Traži da roba kupca bude zbijena u svoj pojas po dužini — što samo po sebi **stvara fragmentaciju**.
+   Slabije pravilo („ništa ne smije *blokirati* raniji izlaz") dopušta gušće punjenje uz isti ishod
+   za skladištara. **Vjerojatno najveći pojedinačni dobitak.**
+2. **Što točno maksimizirati?** Broj komada, volumen, ili vrijednost? Što je bolje: 1 veliki hladnjak
+   ili 4 mikrovalne? Motor bez jasnog cilja ne može biti „bolji od čovjeka".
+3. **Koliko smije trajati izračun?** Reaktivno (<0,3 s, kao sad) ili se smije stisnuti „Izračunaj" i
+   čekati 3-10 s? Ovo IZRAVNO određuje koliko traženja si možemo priuštiti.
+4. **Nosivost po artiklu.** `masa_gore ≤ masa_dolje` je gruba zamjena. Treba li `max_na_vrhu_kg`
+   (npr. TV/staklo = 0)? Bez toga se ili gubi prostor ili se gnječi roba.
+5. **Pun oslonac ili se smije prepust?** Sad se traži PUN oslonac — vrlo restriktivno, izravno
+   doprinosi fragmentaciji. Koliko prepusta je u praksi prihvatljivo?
+6. **Orijentacija.** `issue.txt`: *„polegnuti hladnjak se najčešće slaže po DUŽINI, ne po širini."*
+   Nije kodirano. Također: uspravljanje mora biti ravnopravna opcija, ne fiksno 4 u vis.
+7. **Stabilnost rezultata.** Ranije zamjereno: doda se artikl → sve se prepakira i raspored skače.
+   Je li to i dalje smetnja (dodatno ograničenje) ili nebitno?
+8. **Klime = par** (unutarnja+vanjska zajedno) — motor to još ne zna. Ulazi li u ovaj krug ili kasnije?
+
+## Što NE dirati u ovom krugu
+- Upute skladištaru korak-po-korak (gotovo i potvrđeno 2026-07-20) — motor im samo mijenja ulaz.
+- Sloj „mora u kombi" (`lib/mustFit.js`) — radi iznad packera kao crna kutija; ako se packer zamijeni,
+  mora se zadržati isto sučelje (`computeBest(customers, van, products)`).
+
+## Alati
+- `cd app && node ../tools/real-bench.mjs` — mjerilo na testnim otpremnicama (popunjenost, mrtvi džep,
+  LIFO, propušteno). **Isti izlaz mora mjeriti i svaki kandidat za zamjenu** → poštena usporedba.
+- `node tools/packer-bench.mjs` — stari scenariji iz screenshotova (regresije).
+- `node tools/loadsteps-bench.mjs`, `node tools/mustfit-bench.mjs` — ne smiju puknuti.
+
+---
+
 ## STATUS (gdje smo stali)
 - ✅ Dijagnoza gotova (sekcija 1.4): male stvari (mikrovalne) idu na POD umjesto na VRH → lažni „ne stane".
 - ✅ Mjerilo spremno: `node tools/packer-bench.mjs` reproducira sve slučajeve (CASE-1a/1b/3/4 + REF).

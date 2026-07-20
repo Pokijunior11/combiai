@@ -28,7 +28,7 @@ na MVP, minimalno sljedeće." **Osnovni proces od kraja do kraja = jedini fokus:
 |---|---|---|
 | 1 | **Import otpremnice** | ✅ imam |
 | 2 | **Uređivanje** (stavke, količine, ★ mora) | ✅ mogu |
-| 3 | **DOBRO SLAGANJE** (motor) | ❌ **FALI — glavni problem** |
+| 3 | **DOBRO SLAGANJE** (motor) | ❌ **FALI — glavni problem.** 👉 Korak 1 (mjerenje) gotov; dalje ide kroz **`docs/ENGINE.md` → „POČNI OVDJE — GRILL ZA MOTOR"** |
 | 4 | **Upute skladištaru korak-po-korak** (točno koji artikl na koje mjesto) | ✅ **GOTOVO** (2026-07-20, potvrdio korisnik: „bitno da dobro radi, a radi") |
 
 **Ostalo od koraka 4 (NE blokira korak 3):** vizualne sitnice („ima još vizualnih sitnica, ali to ćemo
