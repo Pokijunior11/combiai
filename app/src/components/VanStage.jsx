@@ -2,13 +2,15 @@ import { useMemo, useState, useEffect } from 'react'
 import { Canvas } from '@react-three/fiber'
 import { OrbitControls } from '@react-three/drei'
 import VanScene from './VanScene'
+import { orderForLoading } from '../lib/loadSteps'
 
-// 3D prikaz + klizač/tipke „korak utovara". Koriste ga i planer i skladištar.
-export default function VanStage({ boxes, van }) {
-  const boxesSorted = useMemo(
-    () => boxes.slice().sort((a, b) => a.x - b.x || a.y - b.y || a.z - b.z).map((p, i) => ({ ...p, step: i })),
-    [boxes],
-  )
+// 3D prikaz + klizač/tipke „korak utovara".
+// Klizač je PLANEROV alat (brzo prelista kako se slaže dok slaže narudžbu). Skladištar ga NEMA —
+// kod njega kroz korake vodi LoadMode velikim tipkama, pa bi dva klizača bila dva izvora istine.
+export default function VanStage({ boxes, van, showSlider = true }) {
+  // Isti topološki redoslijed kojim ide i način „korak po korak" (lib/loadSteps.js) —
+  // inače bi klizač i upute skladištaru govorili različito.
+  const boxesSorted = useMemo(() => orderForLoading(boxes), [boxes])
   const n = boxesSorted.length
   const [step, setStep] = useState(n)
   useEffect(() => { setStep(n) }, [n])
@@ -16,13 +18,13 @@ export default function VanStage({ boxes, van }) {
 
   return (
     <div id="stage">
-      <div id="stepwrap">
+      {showSlider && <div id="stepwrap">
         <span className="steplabel">Korak utovara</span>
         <button className="stepbtn" disabled={step <= 0} onClick={() => setStep((s) => Math.max(0, s - 1))}>◀</button>
         <input type="range" min={0} max={n} value={step} onChange={(e) => setStep(+e.target.value)} />
         <button className="stepbtn" disabled={step >= n} onClick={() => setStep((s) => Math.min(n, s + 1))}>▶</button>
         <span className="stepcount">{step} / {n}</span>
-      </div>
+      </div>}
       <Canvas camera={{ position: [4.6, 3.6, 5.2], fov: 45 }}>
         <color attach="background" args={['#cdd5e0']} />
         <VanScene boxes={visible} van={van} />

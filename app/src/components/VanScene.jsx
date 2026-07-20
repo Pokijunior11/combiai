@@ -1,14 +1,31 @@
 import { Edges, Html } from '@react-three/drei'
 
+// `p._vis` (opcionalno, koristi ga način „korak po korak"):
+//   'done'    = već utovareno → blijedo, da ne odvlači pogled
+//   'current' = OVAJ komad    → puna boja + jak obrub
+//   'next'    = sljedeći      → samo obris, vidi se kamo ide, ali se ne miješa s trenutnim
+// Bez `_vis` (planerov pogled) sve je normalno obojano.
+const VIS = {
+  done:    { opacity: 0.18, edge: '#7c8ba0', edgeW: 1 },
+  current: { opacity: 1,    edge: '#111820', edgeW: 3 },
+  next:    { opacity: 0.10, edge: '#c0392b', edgeW: 2 },
+}
+
 function Box({ p, van }) {
   const cx = p.x + p.dx / 2 - van.L / 2
   const cy = p.y + p.dy / 2
   const cz = p.z + p.dz / 2 - van.W / 2
+  const v = VIS[p._vis]
   return (
     <mesh position={[cx, cy, cz]}>
       <boxGeometry args={[p.dx, p.dy, p.dz]} />
-      <meshStandardMaterial color={p.color} />
-      <Edges color="#1c2a38" />
+      <meshStandardMaterial
+        color={p.color}
+        transparent={!!v && v.opacity < 1}
+        opacity={v ? v.opacity : 1}
+        depthWrite={!v || v.opacity > 0.9}
+      />
+      <Edges color={v ? v.edge : '#1c2a38'} lineWidth={v ? v.edgeW : 1} />
     </mesh>
   )
 }

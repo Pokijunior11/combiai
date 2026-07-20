@@ -3,6 +3,8 @@
 // Tvrda pravila: stane (AABB), ne preklapa, pun oslonac, masa_gore <= masa_dolje, nosivost.
 // Ciljevi (meko): (1) max utovareno, (2) min pomicanja pri istovaru.
 
+import { labelOf } from './labels.js'
+
 const EPS = 1e-6
 
 export function orientations(it) {
@@ -204,7 +206,7 @@ export function unloadPlan(placed) {
       name: mine[0] ? mine[0].custName : ('Kupac ' + (ci+1)),
       color: mine[0] ? mine[0].color : '#888',
       count: mine.length,
-      blockers: [...blockers].map(b => ({ name: b.name, custName: b.custName })),
+      blockers: [...blockers].map(b => ({ name: labelOf(b, b.name), custName: b.custName })),
     })
     for (const Y of mine) inVan.delete(Y)
   }

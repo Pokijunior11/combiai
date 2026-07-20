@@ -10,8 +10,7 @@
 // „Najmanje bitan neobavezan": među neobaveznima nema ranga → mičemo NAJVEĆE prvo
 // (najviše oslobodi prostor/težinu → najmanje ukupno izbačenih komada, najviše ostane).
 import { computeBest } from './packer.js'
-
-const labelOf = (p) => (p ? (p.code ? `Heinner ${p.code}` : p.name) : '?')
+import { labelOf } from './labels.js'
 
 // Koliko komada svakog (kupac, artikl) je packer STVARNO složio.
 function placedCounts(result) {

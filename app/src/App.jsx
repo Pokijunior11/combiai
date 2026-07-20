@@ -1,5 +1,6 @@
 import { useMemo, useState, useEffect } from 'react'
 import { computeWithMust } from './lib/mustFit'
+import { labelOf } from './lib/labels'
 import { fetchArticles, fetchVehicle, saveOrder, updateOrder, loadOrder } from './lib/db'
 import CatalogEditor from './components/CatalogEditor'
 import HomeList from './components/HomeList'
@@ -12,7 +13,6 @@ import './App.css'
 // Boje kupaca (ciklički). Kupac 1 = uz kabinu (prvi utovaren).
 const PALETTE = ['#e0783f', '#2f7dd1', '#4fa06a', '#b5539c', '#c9a227', '#3fb0b0', '#9c6b3f', '#7a5cd0']
 
-const labelOf = (p, fallback) => (p ? (p.code ? `Heinner ${p.code}` : p.name) : fallback)
 const dimOf = (p) => (p ? `${Math.round(p.l * 100)}×${Math.round(p.w * 100)}×${Math.round(p.h * 100)}cm · ${p.weight}kg${p.canLie ? ' · liježe' : ''}` : null)
 
 // Utovar (blokovi kupaca) → ulaz za packer/spremanje:

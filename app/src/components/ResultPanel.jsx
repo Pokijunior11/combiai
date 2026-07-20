@@ -1,3 +1,5 @@
+import { labelOf } from '../lib/labels'
+
 // Statistika + plan istovara + legenda. Koriste ga i planer i skladištar.
 export default function ResultPanel({ best, vehicle, customers }) {
   const vanVol = vehicle.L * vehicle.W * vehicle.H
@@ -6,7 +8,6 @@ export default function ResultPanel({ best, vehicle, customers }) {
   const weight = best.weight
   const wPct = Math.min(100, (weight / vehicle.payload) * 100)
   const over = weight > vehicle.payload
-  const maxY = best.placed.reduce((m, p) => Math.max(m, p.y + p.dy), 0)
   const n = best.placed.length
   const dropped = best.dropped || []                       // neobavezno izbačeno da obavezno stane
   const mustFits = best.mustFits !== false                 // stanu li sva „mora u kombi"
@@ -19,7 +20,7 @@ export default function ResultPanel({ best, vehicle, customers }) {
         <div className="bar"><div style={{ width: `${util.toFixed(0)}%`, background: '#2a6df4' }} /></div>
         <div>Težina: <b>{weight.toFixed(0)} / {vehicle.payload} kg</b></div>
         <div className="bar"><div style={{ width: `${wPct.toFixed(0)}%`, background: over ? '#c0392b' : '#1a8a4a' }} /></div>
-        <div>Utovareno: <b>{n}</b> kom · najviši stup <b>{maxY.toFixed(2)} m</b></div>
+        <div>Utovareno: <b>{n}</b> kom</div>
         <div>Pomicanja pri istovaru: <b>{best.up.moves}</b></div>
         {!mustFits && (
           <div className="warn">⚠ Ne stane ni sve <b>obavezno</b> — {best.mustShort} kom obaveznog ne stane. Smanji količine ili obavezne stavke.</div>
@@ -28,7 +29,7 @@ export default function ResultPanel({ best, vehicle, customers }) {
           <div className="warn">Izbačeno (neobavezno) da obavezno stane: {dropped.map((d) => `${d.name}×${d.count}`).join(', ')}.</div>
         )}
         {best.unplaced.length > 0 && (
-          <div className="warn">Nije stalo (neobavezno): {best.unplaced.length} kom ({best.unplaced.map((u) => u.name).join(', ')}).</div>
+          <div className="warn">Nije stalo (neobavezno): {best.unplaced.length} kom ({[...new Set(best.unplaced.map((u) => labelOf(u, u.name)))].join(', ')}).</div>
         )}
         {mustFits && nothingLeftOut && <div className="ok">✓ Sve stane.</div>}
         {over && <div className="warn">Prekoračena nosivost — makni nešto ili drugi kombi.</div>}

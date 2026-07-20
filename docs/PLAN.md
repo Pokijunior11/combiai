@@ -19,6 +19,25 @@ Poanta: kontekst se drži u `.md` fajlovima (ne u glavi/sesiji), svaki korak je 
 ---
 
 ## 0. Trenutni status / sljedeći korak
+
+### 🎯 MVP RE-FOKUS (odluka korisnika, 2026-07-20) — ČITAJ PRVO
+Korisnik: „opet sam otišao na feature koji je relativno bitan, ali ima puno bitnijih stvari. Vraćam se
+na MVP, minimalno sljedeće." **Osnovni proces od kraja do kraja = jedini fokus:**
+
+| # | Korak MVP-a | Status |
+|---|---|---|
+| 1 | **Import otpremnice** | ✅ imam |
+| 2 | **Uređivanje** (stavke, količine, ★ mora) | ✅ mogu |
+| 3 | **DOBRO SLAGANJE** (motor) | ❌ **FALI — glavni problem** |
+| 4 | **Upute skladištaru korak-po-korak** (točno koji artikl na koje mjesto) | ✅ **GOTOVO** (2026-07-20, potvrdio korisnik: „bitno da dobro radi, a radi") |
+
+**Ostalo od koraka 4 (NE blokira korak 3):** vizualne sitnice („ima još vizualnih sitnica, ali to ćemo
+kasnije uređivati") + **kriška C = slika barkoda** (`jsbarcode`) — složeno u isti kasniji vizualni prolaz,
+jer EAN kao broj već radi provjeru.
+
+**Izvan fokusa dok se 3 i 4 ne zatvore** (ne raditi, ne predlagati): rep za nematchane artikle
+(„to ćemo u drugim iteracijama"), ručni dodaj artikl, editiranje naziva kupca, dodatni prioritet-featurei.
+
 - **F0 GOTOVO** ✅ Živi URL: **https://combiai.vercel.app/** (auto-deploy na `git push`). Kod na `github.com/Pokijunior11/combiai` (main, račun Pokijunior11).
 - **F1 GOTOVO** ✅ (commit `d9e185e`): demo prenesen u React. Packer node-testiran (parity).
 - **F2 GOTOVO** ✅ **i potvrđeno na produkciji** (combiai.vercel.app radi). App čita katalog/kombi iz Supabasea, ekran „Katalog i kombi" (CRUD + uredi kombi).
@@ -45,7 +64,8 @@ Poanta: kontekst se drži u `.md` fajlovima (ne u glavi/sesiji), svaki korak je 
   (migracija `supabase/f7_must_qty.sql`); `db.js` sprema/učita; `App.jsx` ★ = uključi/isključi „mora"
   (default svi komadi) + stepper „mora N / qty", smanjenje qty klampa must, obavezne na vrh. DoD (od 5
   mora 3 → spremi → reopen → očuvano) prošao.
-- **Prioritet DIO 2 IMPLEMENTIRANO** 🟡 (2026-07-16, headless-testirano, čeka localhost potvrdu) —
+- **Prioritet DIO 2 GOTOVO** ✅ (2026-07-20 potvrđeno na localhostu: „kad stavim da je nešto obavezno
+  onda to ostavi, a drugo izbaci — super radi") —
   **motor FORSIRA „mora"** kroz **sloj odabira iznad packera** (`app/src/lib/mustFit.js`,
   `computeWithMust`). Packer NIJE diran (crna kutija). Tok: pusti sve → ako obavezno ne stane, izbaci
   najveće NEOBAVEZNE komade i ponovo `computeBest`, dok sva „mora" ne stanu (ili nema više neobaveznog →
@@ -56,7 +76,7 @@ Poanta: kontekst se drži u `.md` fajlovima (ne u glavi/sesiji), svaki korak je 
   „dodaj artikl" bez otpremnice, editiranje naziva kupca.
 - **Stack:** Vite + React + react-three-fiber · Supabase · Vercel. Odluke: npm, JavaScript, app u `app/`.
 
-### ✅ Prioritet DIO 2 — MOTOR FORSIRA „mora" (IMPLEMENTIRANO 2026-07-16, čeka localhost potvrdu)
+### ✅ Prioritet DIO 2 — MOTOR FORSIRA „mora" (GOTOVO, potvrđeno 2026-07-20)
 **Live: čim planer označi ★ „mora", app izbaci najmanje bitne NEOBAVEZNE komade da obavezni stanu.**
 - **Riješeno kroz `app/src/lib/mustFit.js` → `computeWithMust(customers, van, products)`** (sloj IZNAD
   packera; `packer.js` NIJE diran — crna kutija). Ugrađeno u `App.jsx` + `UtovarView.jsx`; poruke u
@@ -287,6 +307,99 @@ slučajevi = zaseban track (Kolosijek B), nakon eksplicitnih pravila po artiklu.
 - ✅ Otvori spremljeni utovar → read-only upute (3D + koraci + istovar).
 - ⏳ Svaki korak prikaže: **naziv, šifra, BARKOD** (novo — katalog ima `ean` → iscrtati barkod), i **mjesto u kombiju**.
 - ⏳ **Redoslijed koraka:** od **kabine prema vratima**, i **od poda prema stropu** (logičan slijed utovara). Izvor: `issue.txt` („po redu od kabine do vrata, ali od odozdo prema gore").
+
+**🟡 MVP korak 4 — UPUTE KORAK-PO-KORAK (implementirano 2026-07-20, čeka localhost potvrdu)**
+- **Novo:** `app/src/lib/loadSteps.js` (`orderForLoading`, `buildLoadSteps`) + `components/LoadSteps.jsx`,
+  ugrađeno u `UtovarView.jsx` (skladištarov ekran). Stilovi u `App.css` (`.loadsteps` …).
+- **Ključni popravak redoslijeda:** stari sort u `VanStage` bio je čisti `x → y → z`, što zna tražiti da se
+  kutija utovari **prije one na kojoj stoji** (fizički nemoguće). Izmjereno: u **2 od 15** scenarija
+  (`node tools/loadsteps-bench.mjs` + stress) davao je nemoguće korake. Sad je **topološki**: oslonac uvijek
+  prije onoga što na njemu stoji, a među „spremnima" bira kabina→vrata, pa pod→strop. Ispunjava issue.txt.
+- **VanStage 3D klizač koristi ISTI redoslijed** (`orderForLoading`) — inače 3D i tekstualni popis ne govore isto.
+- **Po koraku se vidi:** redni broj, naziv, **šifra**, **EAN**, kg, kupac (+ boja), i mjesto:
+  „na pod / na vrh: {što je ispod}", strana (lijevo/sredina/desno) i **m od kabine**.
+- **Test:** `node tools/loadsteps-bench.mjs` — 3 scenarija, tvrdi uvjet „nijedna kutija prije svog oslonca". ✅
+- **Svjesno NIJE u ovom koraku:** barkod kao **slika** (za sad EAN kao tekst — render treba lib);
+  strana lijevo/desno je konvencija „gledano iz kabine prema vratima" → ako je u praksi obrnuto, samo se okrene.
+
+### 📐 SPEC — „Način utovara" za skladištara (dogovoreno s korisnikom 2026-07-20, prije koda)
+> Nastalo iz grill-sesije nad screenshotom. Prvi pokušaj (tekstualni popis svih koraka) korisnik je
+> odbio: **„ne izgleda nikako i prekomplicirano je"**. Ovo je dogovorena zamjena. Ne mijenjati napamet.
+
+**Uređaj:** VELIKI TABLET na nosaču na stranici kombija (NE mobitel, NE jedna ruka) → 3D ostaje
+**rotabilan**, ima mjesta za veliki raspored. Vodilja korisnika: *„kao da malom djetetu daš uputu i da
+se ne pogubi — sve lijepo prikazano, a sastrane male dodatne stvari."*
+
+**Ekran 1 — „Otvori" (pregled, kao do sada):** gotov složeni utovar u 3D-u, sve brojke ostaju
+**sastrane, male**, + **velika tipka „KRENI UTOVAR" po sredini**.
+- MAKNUTI (izričit zahtjev): kutija „Kombi 4.0 × 2.0 × 2.30 · nosivost · vrata straga" i podatak **„najviši stup"**.
+- Ostalo (iskorištenost, težina, plan istovara, kupci, izbačeno) **ostaje**.
+
+**Ekran 2 — način „korak po korak"** (tipke, NE klizač):
+- **Fokus je 3D**, velik: već utovareno **blijedo**, trenutni artikl **jarko**, sljedeći **obris/isprekidano**.
+- **Kartica artikla — hijerarhija po korisniku** *(„gleda po šifri jer je velika i tako najbrže zna koji
+  je artikl, onda provjeri po barkodu jer nazivi znaju biti jako slični, a barkod je jedinstven")*:
+  1. **ŠIFRA — najveće** (`article.code`, npr. `HSBS-HM522MDNFXE++`) → brzo snalaženje.
+  2. **Naziv** — manje (kontekst).
+  3. **Barkod: slika crta, a ISPOD veliki broj EAN-a** → provjera.
+  4. **Gdje ide, riječima:** npr. „DESNO DOLJE · na pod · uz kabinu". 5. kg + dimenzije.
+- **„ZATIM:" (sljedeći artikl)** — dolje desno, mali (šifra + gdje ide).
+- **Tipke: ◀ NATRAG · SLJEDEĆE ▶** (velike). **Naprijed/natrag u svakom trenutku, uključujući s kraja.**
+- **Žive brojke sastrane** — utovareno N/M, iskorištenost %, težina — **rastu/padaju paralelno** sa
+  stiskanjem naprijed/natrag (ne ukupne, nego „do ovog koraka").
+- **KRAJ:** zadnji korak samo **označi kraj** (nema posebnog ekrana/čestitke); natrag se vraća normalno.
+
+**Tvrda pravila (korisnik izričito):**
+- **STROGO REDOM — nema preskakanja.** Nema „oštećen"/„nema na skladištu" — to se rješava PRIJE utovara.
+- **Korak se PAMTI** (tablet se ugasi/uspava/refresh → nastavlja gdje je stao), lokalno na uređaju.
+- **Klizač „Korak utovara" ostaje PLANERU**, kod skladištara ga nema (inače dva izvora istine).
+
+**Provedba u 3 kriške:** **A = čišćenje + 2 buga ✅** (2026-07-20, čeka localhost potvrdu) ·
+**B = jezgra načina utovara** (kartica, ZATIM, tipke, žive brojke, 3D u 3 stanja, pamćenje koraka) ⏳ ·
+**C = slika barkoda** (`jsbarcode`, jedina dodaje ovisnost) ⏳.
+
+**Kriška A — što je napravljeno (2026-07-20):**
+- `app/src/lib/labels.js` (NOVO) — `labelOf`/`codeOf` na JEDNOM mjestu; maknut duplikat iz `App.jsx` i
+  `mustFit.js`. Kratki naziv sad i u `loadSteps.js`, `ResultPanel` („nije stalo") i `packer.js`
+  (blokatori u planu istovara) — svugdje je curio marketinški opis.
+- Lijevo/desno **okrenuto** u `loadSteps.js` (+ obrazloženje geometrije u komentaru). Dodano
+  `depth` („uz kabinu / sredina / do vrata") i `headline` („DESNO DOLJE") za karticu iz kriške B.
+- Maknuto: kutija s dimenzijama kombija (`van-info`) iz `UtovarView` (planeru u `App.jsx` OSTAJE)
+  i „najviši stup" iz `ResultPanel` (oboma).
+- **Obrisan `components/LoadSteps.jsx`** (odbijeni tekstualni popis) + njegov CSS. `lib/loadSteps.js`
+  (topološki redoslijed) OSTAJE — kriška B ga koristi.
+- Provjera: `npm run build` ✓, `node tools/loadsteps-bench.mjs` ✓, `node tools/mustfit-bench.mjs` ✓.
+
+**Kriška B — jezgra načina utovara (2026-07-20, čeka localhost potvrdu):**
+- `components/LoadMode.jsx` (NOVO) — cijeli način „korak po korak": kartica (ŠIFRA krupno → naziv →
+  EAN razlomljen `5 949123 456789` → „DESNO DOLJE" → kg/dim), „ZATIM" blok, velike tipke
+  ◀ NATRAG / SLJEDEĆE ▶, žive brojke sastrane, 3D bez klizača.
+- `lib/loadSteps.js` → **`stepView(steps, i, van)`** — SVA logika koraka je čista funkcija, ne u
+  komponenti. Namjerno: off-by-one u brojkama se okom ne vidi, a ovako se testira.
+  Dogovor: na koraku `i` komadi `0..i-1` su utovareni, `i` je onaj koji se nosi → brojke = `slice(0,i)`.
+- `lib/loadProgress.js` (NOVO) — pamćenje u `localStorage` po `orderId`, čuva `{active, i}`.
+  **Lokalno, NE u bazi**: napredak je stvar tog tableta i tog utovara; u bazi bi se dva uređaja gazila
+  i tražilo bi mrežu koje u kombiju zna nestati. Ako se tablet ugasi dok je `active` → `UtovarView`
+  vraća RAVNO u način utovara. „✕ Prekini" ne briše korak (nudi „NASTAVI UTOVAR (korak N)").
+  Korak se klampa na raspon ako je planer u međuvremenu promijenio utovar.
+- `VanScene.jsx` — kutije podržavaju `_vis`: `done` (blijedo 0.18) / `current` (puna boja, jak obrub) /
+  `next` (obris, crveno). Bez `_vis` = planerov pogled, nepromijenjen.
+- `VanStage.jsx` — nova prop `showSlider` (default `true`). **Planer zadržava klizač, skladištar ne.**
+- Test: `tools/loadsteps-bench.mjs` proširen — rubni koraci 0 i n, monotonost brojki, točno jedan
+  „current", najviše jedan „sljedeći", klamp izvan raspona, zadnji korak nema „sljedeći". ✅
+- ⚠️ **NEPROVJERENO: sam IZGLED/raspored.** Nema browser-automatizacije u repou (playwright bi bio nova
+  teška ovisnost) → logika je testirana, ali kako to stvarno izgleda na tabletu mora potvrditi korisnik.
+
+**Riješeno iz koda tijekom dogovora (ne pitati ponovno):**
+- 🐛 **BUG — naziv artikla:** `packer` u `placed` nosi sirovi `p.name` = cijeli marketinški opis
+  („Full No Frost,Total capacity: 522L,…") → zato je izgledalo grozno. `App.jsx:15` već ima `labelOf`
+  (`Heinner {code}`), ali se ne koristi na ovom putu. **Izdvojiti `labelOf` u zajednički modul** (sad
+  dupliran u `App.jsx` i `mustFit.js`) i koristiti ga svugdje.
+- 🐛 **BUG — lijevo/desno bilo NAOPAKO.** Geometrija (`VanScene`): kabina na −X, vrata na +X. Kombi vozi
+  prema kabini, pa vozač i promatrač s vrata gledaju u **isti** smjer → lijevo/desno im se poklapa.
+  Dakle **desno (suvozač) = MALI `z`**, lijevo = veliki `z`. `loadSteps.js` trenutno tvrdi obrnuto.
+- **„Šifra" je dvoznačna:** `article.code` = Heinnerova model-oznaka (velika na kutiji) — **TU koristimo**;
+  a u Synesis otpremnici je `SIFRA_ROBE` zapravo **EAN**. Ne pobrkati.
 
 **Otvorena profinjenja (iz ovog toka):**
 - [ ] Prioritet = „mora u kombi" + količina (ne boolean) → i vizualno i **u packeru** (motor to forsira; veže se na §4/§4c).
